@@ -233,8 +233,11 @@ async function draftPage(env, id, url) {
 }
 
 async function topicsPage(env, url) {
+  // Ideas first, OLDEST first — the drafter takes the oldest queued idea,
+  // so the top row is genuinely what runs next. Newest-first would quietly
+  // disagree with the thing it is describing.
   const { results } = await env.DB.prepare(
-    'SELECT id,topic,category,status,title FROM topics ORDER BY CASE status WHEN \'idea\' THEN 0 ELSE 1 END, id DESC',
+    "SELECT id,topic,category,status,title FROM topics ORDER BY CASE status WHEN 'idea' THEN 0 ELSE 1 END, id",
   ).all();
 
   const msg = url.searchParams.get('msg');
@@ -252,8 +255,13 @@ async function topicsPage(env, url) {
   </div></form>`;
 
   body += '<h2>Queue and history</h2><table><thead><tr><th>Topic</th><th>Category</th><th>Status</th></tr></thead><tbody>';
+  let markedNext = false;
   for (const t of results || []) {
-    body += `<tr><td>${esc(t.title || t.topic)}</td><td>${badge(t.category)}</td><td>${esc(t.status)}</td></tr>`;
+    const isNext = !markedNext && t.status === 'idea';
+    if (isNext) markedNext = true;
+    body += `<tr><td>${esc(t.title || t.topic)}${
+      isNext ? ' <span class="badge tips">next up</span>' : ''
+    }</td><td>${badge(t.category)}</td><td>${esc(t.status)}</td></tr>`;
   }
   body += '</tbody></table>';
 
