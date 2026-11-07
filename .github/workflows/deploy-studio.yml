@@ -39,8 +39,25 @@ jobs:
         run: |
           for f in studio/src/*.js; do node --check "$f"; done
 
+      # Until the token exists this is "not set up yet", not "broken". A red
+      # X for unfinished setup trains you to ignore red X's.
+      - name: Is the Cloudflare token set?
+        id: gate
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set, so there is nothing to deploy to. See studio/README.md step 1."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy
+        if: steps.gate.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Pinned: the action's default is wrangler 3, which is out of date.
+          wranglerVersion: '4'
           workingDirectory: studio
