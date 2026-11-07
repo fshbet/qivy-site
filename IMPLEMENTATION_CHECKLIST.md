@@ -1,7 +1,7 @@
 # Qivy — Implementation Checklist
 
 **Date:** 2026-11-07
-**Status:** Phases 1–8 implemented on branch `redesign-ai-first`. Not merged, not deployed.
+**Status:** Phases 1–8 implemented, merged to `main` as `4bcf392`, and **deployed to https://qivy.in/** on 2026-11-07. Post-deploy checks in §11 of the completion report.
 **Depends on:** `CURRENT_STATE_ANALYSIS.md`, `REDESIGN_PLAN.md`, `CONTENT_STRATEGY.md`
 
 > **Measured results, what remains, and what was deliberately not verified are

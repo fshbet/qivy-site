@@ -1,8 +1,8 @@
 # Qivy — Redesign Completion Report
 
 **Date:** 2026-11-07
-**Branch:** `redesign-ai-first` (not merged, not deployed)
-**Live site:** unchanged — still serving the previous single-file `index.html`
+**Branch:** `redesign-ai-first`, merged into `main` as `4bcf392`
+**Live site:** **deployed** — `https://qivy.in/` serves the new build (§11)
 
 Checks marked ✅ were **run**, with the command and result recorded. Anything not run is marked **not verified** and listed in §8. No check is reported as passing on the basis of inspection alone.
 
@@ -207,7 +207,7 @@ An article page is roughly **1/10th** the old payload, and a reader downloads on
 
 ### 7.1 Needs your decision
 
-1. **Pages source must be switched to GitHub Actions** before anything deploys. Until then the old `index.html` keeps serving. This is a production change and deliberately left to you — see [DEPLOYMENT.md](./DEPLOYMENT.md).
+1. ~~Pages source must be switched to GitHub Actions.~~ **Done by you, verified** — the Pages API reports `"build_type": "workflow"`. The site is live.
 2. **The GitHub credential for the pipeline.** No GitHub credential exists in n8n; the four GitHub-facing nodes have an empty placeholder. The workflow cannot run until you add a token with `repo` scope.
 3. **The notification recipient** in `Notify admin` is `CHANGE_ME@example.com`. Left as a placeholder rather than guessing — publishing your personal address was not mine to decide.
 4. **Contact details.** About, Privacy and Terms point at `github.com/fshbet`. If you want an email published, say which.
@@ -259,11 +259,45 @@ One ambiguity resolved itself: the n8n instance reachable over MCP **is** `n8n.q
 
 ## 10. Deployment requirements
 
-1. Switch **Settings → Pages → Source** to **GitHub Actions**. *(Required — nothing deploys until this is done.)*
-2. Merge `redesign-ai-first` into `main`.
-3. Confirm `dist/CNAME` is present in the build output — it is, via `public/CNAME`.
-4. Run the post-deploy checks in [DEPLOYMENT.md](./DEPLOYMENT.md).
-5. Submit `https://qivy.in/sitemap-index.xml` to Google Search Console.
-6. For the pipeline: add the GitHub credential, set the notification address, dry-run once, then activate.
+1. ~~Switch **Settings → Pages → Source** to **GitHub Actions**.~~ Done.
+2. ~~Merge `redesign-ai-first` into `main`.~~ Done — `4bcf392`.
+3. ~~Confirm `dist/CNAME` is present in the build output.~~ Confirmed, via `public/CNAME`.
+4. ~~Run the post-deploy checks.~~ Run — §11.
+5. **Submit `https://qivy.in/sitemap-index.xml` to Google Search Console.** Still outstanding; needs your Google account.
+6. For the pipeline: add the GitHub credential, set the notification address, dry-run once, then activate. Still outstanding.
 
 Rollback is `git revert` of the merge commit, plus setting Pages back to branch-based if needed. The old site returns exactly as it was.
+
+---
+
+## 11. Deployment record
+
+**Deployed 2026-11-07.** Commit `4bcf392` on `main`. Workflow run `42386018404`, both jobs `success`.
+
+CI ran the same gates as local, on Linux: `npm ci`, `npm run build`, `npm run check:contrast`, then Chromium plus `npm run verify`. A failure in any of them would have stopped the deploy before the Pages artifact was uploaded.
+
+### 11.1 Post-deploy checks — run against the live site
+
+| Check | Result |
+|---|---|
+| Homepage | `200`, 40,789 B, title `Qivy — Make Technology Work Smarter \| AI & Automation` |
+| Four category hubs + `/maker/` | all `200` |
+| `/about/`, `/privacy/`, `/tools/` | all `200` |
+| Article page | `200`, canonical correct, `Article` + `BreadcrumbList` + `WebPage` + `Organization` JSON-LD present |
+| Filament hub and a filament guide | both `200` |
+| `/rss.xml`, `/sitemap-index.xml`, `/robots.txt`, `/og-default.png` | all `200` |
+| Unknown URL | `404` (real status, not a soft 200) |
+| `https://www.qivy.in/` | `301` → `https://qivy.in/` |
+| HTTPS certificate | approved for `qivy.in` and `www.qivy.in`, expires 2026-12-22 |
+| JS files requested by the homepage | 0 |
+| Rendered homepage, desktop and 375 px | checked visually — hero, nav, pillar cards correct, no horizontal scroll |
+
+### 11.2 One behaviour change confirmed live
+
+`https://qivy.in/Tools/` and the two zip files under it now return `404`. They were served before.
+
+Checked before reporting: the old `index.html` contained **no link to them** — `grep -oE 'Tools/[A-Za-z0-9._%-]+' index.html` returns nothing. They were uploaded files with no route into them from the site, so there is no inbound link on the site to break. The files remain in the repository and nothing was deleted. If any direct link to them was shared elsewhere, that link is now broken — say so and they can be restored.
+
+### 11.3 Rollback
+
+`git revert 4bcf392 && git push`, or set **Settings → Pages → Source** back to a branch build. The root `index.html` is untouched, so the old site returns exactly as it was.
