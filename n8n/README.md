@@ -1,5 +1,17 @@
 # Qivy — Daily Content Pipeline (n8n)
 
+> **Superseded by [Qivy Studio](../studio/README.md).**
+>
+> This workflow runs on the n8n instance at `D:\AI
+8n` — a PC. The daily
+> draft only happened when that machine was on. Studio is a Cloudflare
+> Worker doing the same job with the same editorial rules, plus a review
+> page, and depends on nothing you have to keep switched on.
+>
+> This workflow is **inactive** and is kept only as a fallback. The setup
+> steps below are no longer the path to follow.
+
+
 **Workflow:** [Qivy — Daily Content Pipeline](https://n8n.qivy.in/workflow/rzIuwCIMlbw1qiGm) (`rzIuwCIMlbw1qiGm`)
 **Instance:** `n8n.qivy.in`
 **Data table:** `Qivy Content Ledger` (`nt4YIGvd4r5gNydo`)

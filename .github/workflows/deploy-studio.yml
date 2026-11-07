@@ -1,0 +1,46 @@
+name: Deploy Qivy Studio
+
+# Deploys the editorial dashboard Worker.
+#
+# Deliberately runs here rather than from a laptop: the whole point of moving
+# off n8n was to stop depending on one machine being switched on. Nobody needs
+# wrangler installed locally.
+#
+# Requires one repository secret:
+#   CLOUDFLARE_API_TOKEN — a Cloudflare API token with
+#     Account → Workers Scripts → Edit
+#     Account → Workers KV Storage → Edit
+#     Account → D1 → Edit
+#     Zone  → Workers Routes → Edit   (on qivy.in, for the custom domain)
+#
+# See studio/README.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'studio/**'
+      - '.github/workflows/deploy-studio.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fails the deploy on a syntax error rather than shipping a Worker that
+      # throws on first request.
+      - name: Syntax check
+        run: |
+          for f in studio/src/*.js; do node --check "$f"; done
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: studio

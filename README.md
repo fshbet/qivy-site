@@ -167,3 +167,10 @@ Change colours in `src/styles/tokens.css`, then re-run the contrast check.
 | [REDESIGN_COMPLETION_REPORT.md](./REDESIGN_COMPLETION_REPORT.md) | What changed, test results, what remains |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Deploy and rollback |
 | [n8n/README.md](./n8n/README.md) | Daily content pipeline |
+
+## Editorial dashboard
+
+Drafting and publishing run in [Qivy Studio](./studio/README.md) — a
+Cloudflare Worker at `write.qivy.in`. It drafts one article each morning,
+holds it for review, and commits to this repo when you approve it. Setup and
+the security model are in that README.

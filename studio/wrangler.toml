@@ -1,0 +1,43 @@
+name = "qivy-studio"
+main = "src/index.js"
+compatibility_date = "2026-11-07"
+
+# SECURITY: Cloudflare Access protects a hostname, NOT the workers.dev URL.
+# Leaving workers.dev enabled would publish an unauthenticated copy of this
+# app that can spend your OpenRouter credits and commit to your repository.
+# Keep this false. The Access JWT check in src/access.js is the second lock.
+workers_dev = false
+
+# The dashboard lives here. Change the hostname if you prefer another one —
+# wrangler creates the DNS record on deploy, as long as qivy.in is in this
+# Cloudflare account.
+[[routes]]
+pattern = "write.qivy.in"
+custom_domain = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "qivy-studio"
+database_id = "b6a92c24-9238-4fd1-b778-9e3cbbc02aac"
+
+[[kv_namespaces]]
+binding = "SETTINGS"
+id = "e9af20372ba641b692492afc84d9046e"
+
+# 00:30 UTC = 06:00 IST. This replaces the n8n schedule, which only ran when
+# your PC was on.
+[triggers]
+crons = ["30 0 * * *"]
+
+[vars]
+GITHUB_OWNER = "fshbet"
+GITHUB_REPO = "qivy-site"
+GITHUB_BRANCH = "main"
+SITE_URL = "https://qivy.in"
+
+# Both MUST be set before the app will serve anything — it fails closed.
+# ACCESS_TEAM_DOMAIN: "<your-team>.cloudflareaccess.com"
+# ACCESS_AUD:         the Application Audience tag from the Access app.
+# Set them here and redeploy, or in the dashboard under Settings → Variables.
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
