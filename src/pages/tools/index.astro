@@ -1,0 +1,248 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import CategoryBadge from '../../components/CategoryBadge.astro';
+import FollowCta from '../../components/FollowCta.astro';
+import { CATEGORY_META, formatDate, type Category } from '../../lib/content';
+
+const tools = (await getCollection('tools')).sort((a, b) =>
+  a.data.name.localeCompare(b.data.name),
+);
+
+const groups = (['ai', 'automation', 'tips'] as Category[])
+  .map((c) => ({
+    category: c,
+    items: tools.filter((t) => t.data.category === c),
+  }))
+  .filter((g) => g.items.length > 0);
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: Astro.site?.href },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Tools',
+      item: new URL('/tools/', Astro.site).href,
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title="Tools — AI, automation & productivity software | Qivy"
+  description="A reference list of AI tools, automation platforms and productivity utilities, with the use case and the date each price was last checked."
+  schemas={[breadcrumbSchema]}
+>
+  <section class="hdr wrap">
+    <Breadcrumbs crumbs={[{ label: 'Tools' }]} />
+    <h1>Tools</h1>
+    <p class="lede">
+      AI tools, automation platforms and productivity utilities worth knowing
+      about. Each entry says what it is actually for.
+    </p>
+
+    <aside class="pricing-note">
+      <strong>About the pricing shown.</strong> Every price carries the date it
+      was last checked against the vendor's own page. Software pricing changes
+      often, so treat anything older than a month or two as a starting point
+      and follow the link for the current figure. Where a price could not be
+      confirmed, this page says so rather than guessing.
+    </aside>
+  </section>
+
+  {
+    groups.length > 0 ? (
+      groups.map((g) => (
+        <section class="section wrap" aria-labelledby={`g-${g.category}`}>
+          <div class="g-head">
+            <h2 id={`g-${g.category}`}>{CATEGORY_META[g.category].label}</h2>
+            <span class="g-count">
+              {g.items.length} tool{g.items.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <div class="grid">
+            {g.items.map((t) => (
+              <article class="tool">
+                <div class="tool-top">
+                  <h3>{t.data.name}</h3>
+                  <CategoryBadge category={t.data.category} />
+                </div>
+                <p class="desc">{t.data.description}</p>
+                <dl>
+                  <dt>Main use case</dt>
+                  <dd>{t.data.useCase}</dd>
+                  <dt>Pricing</dt>
+                  <dd>
+                    {t.data.pricing}
+                    <span class="checked">
+                      Checked {formatDate(t.data.pricingCheckedOn)}
+                    </span>
+                  </dd>
+                </dl>
+                <a href={t.data.url} target="_blank" rel="noopener noreferrer">
+                  Official website
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M7 17 17 7M17 7H8m9 0v9" />
+                  </svg>
+                </a>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))
+    ) : (
+      <section class="wrap">
+        <p class="empty">No tools listed yet.</p>
+      </section>
+    )
+  }
+
+  <section class="section wrap">
+    <FollowCta compact />
+  </section>
+</BaseLayout>
+
+<style>
+  .hdr {
+    padding-block: var(--sp-6) 0;
+  }
+  h1 {
+    margin-top: var(--sp-5);
+    font-size: var(--fs-3xl);
+  }
+  .lede {
+    margin-top: var(--sp-4);
+  }
+
+  .pricing-note {
+    margin-top: var(--sp-6);
+    padding: var(--sp-5);
+    background: var(--bg-2);
+    border: 1px solid var(--bd);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--r-l) var(--r-l) 0;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    max-width: 72ch;
+  }
+  .pricing-note strong {
+    color: var(--text);
+  }
+
+  .g-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding-bottom: var(--sp-4);
+    margin-bottom: var(--sp-5);
+    border-bottom: 1px solid var(--bd);
+  }
+  .g-head h2 {
+    font-size: var(--fs-2xl);
+  }
+  .g-count {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+
+  .tool {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-5);
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-l);
+    transition: border-color 0.18s ease;
+  }
+  .tool:hover {
+    border-color: var(--bd-md);
+  }
+  .tool-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+  }
+  .tool h3 {
+    font-size: var(--fs-lg);
+  }
+  .desc {
+    margin-top: var(--sp-3);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  dl {
+    flex: 1;
+    margin-top: var(--sp-4);
+  }
+  dt {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    margin-top: var(--sp-3);
+  }
+  dd {
+    margin-top: var(--sp-1);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .checked {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+    margin-top: var(--sp-1);
+  }
+  .tool > a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 44px;
+    margin-top: var(--sp-4);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .tool > a svg {
+    width: 14px;
+    height: 14px;
+  }
+  .tool > a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .empty {
+    padding: var(--sp-7);
+    text-align: center;
+    color: var(--text-2);
+    border: 1px dashed var(--bd-md);
+    border-radius: var(--r-xl);
+  }
+
+  @media (max-width: 1000px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 640px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

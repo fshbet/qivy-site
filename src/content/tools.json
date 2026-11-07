@@ -1,0 +1,101 @@
+[
+  {
+    "id": "ollama",
+    "name": "Ollama",
+    "description": "Runs open-weight language models locally on your own machine, with a single command per model and an HTTP API that mimics the common chat-completions shape.",
+    "useCase": "Running an AI model offline, with no per-token cost and no data leaving your machine.",
+    "pricing": "Free, open source (MIT)",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://ollama.com",
+    "category": "ai",
+    "featured": true
+  },
+  {
+    "id": "n8n",
+    "name": "n8n",
+    "description": "Workflow automation with a visual node editor, several hundred integrations, and the option to self-host. Handles branching, loops and custom code steps that simpler tools cannot.",
+    "useCase": "Connecting apps and running multi-step automations on a schedule or a webhook.",
+    "pricing": "Self-hosted community edition free; cloud plans paid — check current pricing",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://n8n.io",
+    "category": "automation",
+    "featured": true
+  },
+  {
+    "id": "claude-code",
+    "name": "Claude Code",
+    "description": "Anthropic's command-line coding agent. Reads a repository, edits files, runs commands and iterates on test failures from the terminal.",
+    "useCase": "Delegating multi-file code changes and investigations in an existing codebase.",
+    "pricing": "Requires a paid Claude plan or API credit — check current pricing",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://claude.com/claude-code",
+    "category": "ai",
+    "featured": true
+  },
+  {
+    "id": "vscode",
+    "name": "Visual Studio Code",
+    "description": "Microsoft's extensible code editor, with an extension marketplace, integrated terminal, Git support and remote development over SSH and containers.",
+    "useCase": "Everyday code and config editing, including remote machines.",
+    "pricing": "Free",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://code.visualstudio.com",
+    "category": "tips",
+    "featured": true
+  },
+  {
+    "id": "python-pandas",
+    "name": "pandas",
+    "description": "The standard Python library for tabular data — reading messy CSV and Excel files, cleaning columns, reshaping, grouping and exporting the result.",
+    "useCase": "Cleaning and reshaping spreadsheet data in a repeatable script instead of by hand.",
+    "pricing": "Free, open source (BSD)",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://pandas.pydata.org",
+    "category": "tips",
+    "featured": false
+  },
+  {
+    "id": "power-bi",
+    "name": "Microsoft Power BI",
+    "description": "Business intelligence suite for building dashboards from multiple data sources. Power BI Desktop authors reports on Windows; sharing them with others requires a paid service tier.",
+    "useCase": "Building and publishing interactive business dashboards.",
+    "pricing": "Desktop free; sharing requires a paid tier — check current pricing",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://www.microsoft.com/power-platform/products/power-bi",
+    "category": "tips",
+    "featured": true
+  },
+  {
+    "id": "looker-studio",
+    "name": "Looker Studio",
+    "description": "Google's browser-based reporting tool. Connects to Google Sheets, BigQuery and many third-party sources, and shares dashboards by link.",
+    "useCase": "Free shareable dashboards, especially over data already in Google Sheets.",
+    "pricing": "Free tier available; Looker Studio Pro paid — check current pricing",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://lookerstudio.google.com",
+    "category": "tips",
+    "featured": false
+  },
+  {
+    "id": "github-actions",
+    "name": "GitHub Actions",
+    "description": "CI/CD runners built into GitHub repositories. Runs workflows on push, pull request, a schedule, or a manual trigger.",
+    "useCase": "Scheduled jobs and build/deploy pipelines without hosting a server.",
+    "pricing": "Free minutes on public repos; private metered — check current pricing",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://github.com/features/actions",
+    "category": "automation",
+    "featured": true
+  },
+  {
+    "id": "astro",
+    "name": "Astro",
+    "description": "Static site framework that ships zero JavaScript by default, with Markdown content collections, schema validation and build-time syntax highlighting.",
+    "useCase": "Content-heavy sites that need to be fast and indexable.",
+    "pricing": "Free, open source (MIT)",
+    "pricingCheckedOn": "2026-11-07",
+    "url": "https://astro.build",
+    "category": "automation",
+    "featured": false
+  }
+]

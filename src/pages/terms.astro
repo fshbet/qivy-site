@@ -1,0 +1,123 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+
+const updated = '7 November 2026';
+---
+
+<BaseLayout
+  title="Terms of Use | Qivy"
+  description="Terms for using qivy.in: how the content may be used, the limits of technical guidance, and what is and is not warranted."
+>
+  <section class="hdr wrap">
+    <Breadcrumbs crumbs={[{ label: 'Terms' }]} />
+    <h1>Terms of Use</h1>
+    <p class="meta">Last updated {updated}</p>
+  </section>
+
+  <div class="wrap body">
+    <div class="prose">
+      <h2>The short version</h2>
+      <p>
+        Qivy publishes technical guidance for free. Read it, use it, check it
+        before you rely on it for anything that matters, and don't republish it
+        wholesale as your own.
+      </p>
+
+      <h2>Using the content</h2>
+      <p>
+        You are welcome to read, apply and share Qivy's articles, and to quote
+        from them with attribution and a link. Code and configuration snippets
+        in articles may be used freely in your own projects.
+      </p>
+      <p>
+        Please don't republish whole articles — on a website, in a newsletter,
+        or as AI-generated derivatives presented as original work. A link costs
+        you nothing and keeps the original findable.
+      </p>
+
+      <h2>Accuracy and the limits of this guidance</h2>
+      <p>
+        Articles are written to be correct at the time of publication, and
+        every article shows whether it was <strong>Tested</strong> (actually
+        run) or <strong>Researched</strong> (verified against documentation but
+        not personally run), with its sources listed.
+      </p>
+      <p>
+        Technology moves. Interfaces are redesigned, flags are renamed, APIs
+        break, pricing changes and free tiers disappear. An article that was
+        accurate when written can be wrong months later. <strong>Check the
+        publication date and the vendor's current documentation before relying
+        on anything here.</strong>
+      </p>
+      <p>
+        This matters most for anything involving your data or your money.
+        Automation scripts can delete files, overwrite spreadsheets and send
+        messages you didn't intend. Test on sample data first. Pricing shown
+        for any tool carries the date it was checked and is a starting point,
+        not a quote.
+      </p>
+
+      <h2>No warranty</h2>
+      <p>
+        The content is provided "as is", without warranty of any kind. Qivy
+        does not guarantee that any instruction, script or configuration will
+        work in your environment, and accepts no liability for data loss,
+        service costs, downtime or other damage arising from following it. You
+        remain responsible for what you run on your own systems.
+      </p>
+
+      <h2>Third-party tools and links</h2>
+      <p>
+        Qivy writes about software it does not control. Links to tools,
+        documentation and vendors are provided for reference and are not
+        endorsements, and Qivy is not responsible for those services, their
+        terms, their pricing or their continued existence.
+      </p>
+      <p>
+        Nothing on this site is a paid placement. No vendor pays to be included
+        in an article or in the Tools list.
+      </p>
+
+      <h2>Availability</h2>
+      <p>
+        Qivy is a personal publication offered free of charge. There is no
+        uptime commitment, and articles may be updated, corrected, archived or
+        removed at any time.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        These terms may be updated; the date above reflects the latest version,
+        and the change history is public in the site's
+        <a href="https://github.com/fshbet/qivy-site" target="_blank" rel="noopener noreferrer">repository</a>.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions, or a correction to report:
+        <a href="https://github.com/fshbet" target="_blank" rel="noopener noreferrer">github.com/fshbet</a>.
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .hdr {
+    padding-block: var(--sp-6);
+    border-bottom: 1px solid var(--bd);
+  }
+  h1 {
+    margin-top: var(--sp-5);
+    font-size: var(--fs-3xl);
+  }
+  .meta {
+    margin-top: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+  .body {
+    padding-top: var(--sp-7);
+  }
+</style>

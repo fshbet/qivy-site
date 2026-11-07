@@ -1,0 +1,136 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+
+const updated = '7 November 2026';
+---
+
+<BaseLayout
+  title="Privacy Policy | Qivy"
+  description="What Qivy does and does not collect. A static site with no analytics, no cookies set by us, no accounts and no newsletter signup."
+>
+  <section class="hdr wrap">
+    <Breadcrumbs crumbs={[{ label: 'Privacy Policy' }]} />
+    <h1>Privacy Policy</h1>
+    <p class="meta">Last updated {updated}</p>
+  </section>
+
+  <div class="wrap body">
+    <div class="prose">
+      <p>
+        This page describes what actually happens when you visit qivy.in. It is
+        written to match how the site is currently built, not as boilerplate.
+        If that changes, this page changes with it.
+      </p>
+
+      <h2>What Qivy collects</h2>
+      <p>
+        <strong>Nothing, directly.</strong> Qivy is a static website. There are
+        no accounts, no logins, no comment system, no newsletter signup form,
+        no contact form and no advertising. There is nothing here that asks you
+        for personal information, so there is nothing for this site to store.
+      </p>
+
+      <h2>Cookies and local storage</h2>
+      <p>Qivy sets no cookies.</p>
+      <p>
+        One item is stored in your browser's <strong>local storage</strong>: a
+        key named <code>qivy-theme</code>, holding either <code>dark</code> or
+        <code>light</code>. It exists only so the site remembers your theme
+        choice between visits. It is never sent anywhere, contains no
+        identifier, and clearing your browser data removes it.
+      </p>
+
+      <h2>Analytics</h2>
+      <p>
+        <strong>No analytics are currently installed.</strong> No page-view
+        tracking, no heatmaps, no session recording, no third-party tracking
+        scripts of any kind.
+      </p>
+      <p>
+        If analytics are added later, a privacy-respecting and cookie-free
+        option will be used, and this page will be updated to name it before it
+        goes live.
+      </p>
+
+      <h2>Third parties that do see something</h2>
+      <p>Two services are involved in delivering this site to you:</p>
+      <ul>
+        <li>
+          <strong>GitHub Pages</strong> hosts the site. Like any web host,
+          GitHub receives the network request for each page — which includes
+          your IP address and browser user-agent — in order to serve it. This
+          is handled under
+          <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub's privacy statement</a>.
+        </li>
+        <li>
+          <strong>Google Fonts</strong> serves the two typefaces this site
+          uses. Your browser requests those font files from Google's servers,
+          which means Google receives that request. This is covered by
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's privacy policy</a>.
+        </li>
+      </ul>
+      <p>
+        Neither is a tracking arrangement set up by Qivy — they are a
+        consequence of where the site is hosted and where its fonts come from.
+      </p>
+
+      <h2>External links</h2>
+      <p>
+        Articles link out to documentation, tools and vendor websites. Those
+        sites have their own privacy practices, and Qivy has no control over
+        and no insight into what they collect.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        Qivy is a general technology publication and is not directed at
+        children. Since it collects no personal information from anyone, it
+        collects none from children either.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        Data-protection rights — access, correction, deletion, portability —
+        apply to personal data a site holds about you. Qivy holds none, so
+        there is nothing to request, correct or delete. If analytics or a
+        newsletter are added in future, this section will be updated to
+        explain how to exercise those rights.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        Any change to this policy will be reflected in the "last updated" date
+        above. Because this site is version-controlled in public, the full
+        history of changes to this page is visible in its
+        <a href="https://github.com/fshbet/qivy-site" target="_blank" rel="noopener noreferrer">repository</a>.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about this policy can go to
+        <a href="https://github.com/fshbet" target="_blank" rel="noopener noreferrer">github.com/fshbet</a>.
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .hdr {
+    padding-block: var(--sp-6);
+    border-bottom: 1px solid var(--bd);
+  }
+  h1 {
+    margin-top: var(--sp-5);
+    font-size: var(--fs-3xl);
+  }
+  .meta {
+    margin-top: var(--sp-3);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+  .body {
+    padding-top: var(--sp-7);
+  }
+</style>

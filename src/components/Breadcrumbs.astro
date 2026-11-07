@@ -1,0 +1,82 @@
+---
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+
+export interface Props {
+  crumbs: Crumb[];
+}
+
+const { crumbs } = Astro.props;
+---
+
+<nav class="bc" aria-label="Breadcrumb">
+  <ol>
+    <li><a href="/">Home</a></li>
+    {
+      crumbs.map((c, i) => (
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="m9 6 6 6-6 6" />
+          </svg>
+          {c.href && i < crumbs.length - 1 ? (
+            <a href={c.href}>{c.label}</a>
+          ) : (
+            <span aria-current="page">{c.label}</span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+
+<style>
+  .bc ol {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    font-size: var(--fs-sm);
+    color: var(--text-3);
+  }
+
+  .bc li {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+
+  .bc svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--text-3);
+  }
+
+  .bc a {
+    color: var(--text-2);
+    padding-block: var(--sp-1);
+  }
+  .bc a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .bc [aria-current='page'] {
+    color: var(--text-3);
+    /* Long article titles must not push the crumb trail off-screen. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 44ch;
+  }
+
+  @media (max-width: 560px) {
+    .bc [aria-current='page'] {
+      max-width: 20ch;
+    }
+  }
+</style>

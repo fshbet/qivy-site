@@ -1,0 +1,13 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "scripts",
+    // Source of record for the n8n workflow. It imports @n8n/workflow-sdk,
+    // which is resolved by n8n's own builder, not installed here — and it is
+    // not part of the site build.
+    "n8n"
+  ]
+}

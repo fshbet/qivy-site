@@ -1,0 +1,230 @@
+---
+import CategoryBadge from './CategoryBadge.astro';
+import {
+  articlePath,
+  formatDate,
+  isoDate,
+  readingTime,
+  type Article,
+} from '../lib/content';
+
+export interface Props {
+  article: Article;
+  /** Larger treatment for the first card in a feed. */
+  featured?: boolean;
+}
+
+const { article, featured = false } = Astro.props;
+const { data } = article;
+
+const href = articlePath(article);
+const minutes = readingTime(article.body);
+---
+
+<article class:list={['card', { 'card--featured': featured }]}>
+  <a class="hit" href={href} aria-labelledby={`t-${article.id}`}></a>
+
+  {
+    data.image ? (
+      <img
+        class="thumb"
+        src={data.image}
+        alt={data.imageAlt}
+        loading="lazy"
+        decoding="async"
+        width={featured ? 720 : 440}
+        height={featured ? 405 : 248}
+      />
+    ) : (
+      /* No image: a tinted placeholder keyed to the category, so a feed with
+         mixed coverage still reads as deliberate rather than broken. */
+      <div class="thumb thumb--empty" data-cat={data.category} aria-hidden="true">
+        <span>{data.category === 'maker' ? 'MAKER' : data.category.toUpperCase()}</span>
+      </div>
+    )
+  }
+
+  <div class="body">
+    <div class="meta-top">
+      <CategoryBadge category={data.category} />
+      <span class="dot" aria-hidden="true">·</span>
+      <span class="mins">{minutes} min read</span>
+    </div>
+
+    <h3 id={`t-${article.id}`}>{data.title}</h3>
+    <p class="summary">{data.summary}</p>
+
+    <div class="meta-bot">
+      <time datetime={isoDate(data.publishDate)}>
+        {formatDate(data.publishDate)}
+      </time>
+      <span class="read">
+        Read article
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M5 12h14m-6-6 6 6-6 6" />
+        </svg>
+      </span>
+    </div>
+  </div>
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-l);
+    overflow: hidden;
+    transition:
+      border-color 0.2s ease,
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    border-color: var(--bd-md);
+    transform: translateY(-3px);
+    box-shadow: var(--sh);
+  }
+
+  /*
+    The whole card is clickable via an overlay link, but only ONE link exists
+    in the accessibility tree — so a screen reader announces one target, not
+    three. aria-labelledby points it at the heading.
+  */
+  .hit {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+  .hit:focus-visible {
+    outline-offset: -3px;
+  }
+
+  .thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-bottom: 1px solid var(--bd);
+    background: var(--bg-3);
+  }
+
+  .thumb--empty {
+    display: grid;
+    place-items: center;
+  }
+  .thumb--empty span {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.22em;
+    color: var(--text-3);
+  }
+  .thumb--empty[data-cat='ai'] {
+    background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+  }
+  .thumb--empty[data-cat='automation'] {
+    background: linear-gradient(135deg, var(--accent-2-soft), transparent 70%);
+  }
+  .thumb--empty[data-cat='tips'] {
+    background: linear-gradient(135deg, var(--accent-3-soft), transparent 70%);
+  }
+  .thumb--empty[data-cat='maker'] {
+    background: linear-gradient(135deg, var(--accent-4-soft), transparent 70%);
+  }
+
+  .body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: var(--sp-5);
+  }
+
+  .meta-top {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+  }
+
+  .dot {
+    color: var(--text-3);
+  }
+
+  .mins,
+  .meta-bot time {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+
+  h3 {
+    font-size: var(--fs-lg);
+    line-height: 1.3;
+    margin-bottom: var(--sp-3);
+  }
+
+  .card:hover h3 {
+    color: var(--accent);
+  }
+
+  .summary {
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    /* Two lines keeps a grid of cards aligned without truncating mid-word. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .meta-bot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-top: auto;
+    padding-top: var(--sp-5);
+  }
+
+  .read {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .read svg {
+    width: 15px;
+    height: 15px;
+    transition: transform 0.2s ease;
+  }
+  .card:hover .read svg {
+    transform: translateX(3px);
+  }
+
+  /* Featured: side-by-side on wide screens, stacked below. */
+  @media (min-width: 760px) {
+    .card--featured {
+      flex-direction: row;
+    }
+    .card--featured .thumb {
+      width: 46%;
+      aspect-ratio: auto;
+      border-bottom: 0;
+      border-right: 1px solid var(--bd);
+    }
+    .card--featured .body {
+      padding: var(--sp-6);
+    }
+    .card--featured h3 {
+      font-size: var(--fs-2xl);
+    }
+    .card--featured .summary {
+      font-size: var(--fs-base);
+      -webkit-line-clamp: 3;
+    }
+  }
+</style>

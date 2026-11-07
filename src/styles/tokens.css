@@ -1,0 +1,121 @@
+/**
+ * Qivy design tokens.
+ *
+ * Carried over from the previous site's token structure (which was sound) with
+ * the accent rotated from coral to electric indigo per REDESIGN_PLAN.md §5.1.
+ *
+ * Every text/background pair below is MEASURED against WCAG 2.2 AA by
+ * scripts/check-contrast.mjs. Do not change a colour without re-running it:
+ *   node scripts/check-contrast.mjs
+ */
+
+:root {
+  /* ── Surface — deep navy, dark-first ─────────────────────────────── */
+  --bg: #0b0f1a;
+  --bg-2: #111726;
+  --bg-3: #1a2234;
+  --bg-card: #111726;
+
+  /* ── Text (measured: 17.38 / 8.79 / 6.21 on --bg) ────────────────── */
+  --text: #f2f4f8;
+  --text-2: #a7b0c4;
+  --text-3: #8a93a8;
+
+  /* ── Category accents — one hue per pillar ───────────────────────────
+   * Gives the "clear category differentiation" the brief asks for.
+   * Maker keeps a coral close to the previous brand, so the archive still
+   * feels like the site it came from.                                   */
+  --accent: #8b9bff; /* AI          — 7.50 on --bg */
+  --accent-2: #a99ff0; /* Automation  — 8.11 on --bg */
+  --accent-3: #3fc79b; /* Tips        — 8.98 on --bg */
+  --accent-4: #f09478; /* Maker       — 8.39 on --bg */
+
+  --accent-soft: rgba(139, 155, 255, 0.12);
+  --accent-2-soft: rgba(169, 159, 240, 0.12);
+  --accent-3-soft: rgba(63, 199, 155, 0.12);
+  --accent-4-soft: rgba(240, 148, 120, 0.12);
+
+  /* ── Border ──────────────────────────────────────────────────────── */
+  --bd: rgba(255, 255, 255, 0.07);
+  --bd-md: rgba(255, 255, 255, 0.12);
+
+  /* ── Radius ──────────────────────────────────────────────────────── */
+  --r-sm: 6px;
+  --r: 10px;
+  --r-l: 14px;
+  --r-xl: 20px;
+
+  /* ── Shadow ──────────────────────────────────────────────────────── */
+  --sh-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --sh: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --sh-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+
+  /* ── Type ────────────────────────────────────────────────────────── */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas,
+    monospace;
+
+  /* Fluid type scale */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+  --fs-2xl: clamp(1.5rem, 1.25rem + 1.2vw, 2rem);
+  --fs-3xl: clamp(1.875rem, 1.4rem + 2.2vw, 2.75rem);
+  --fs-4xl: clamp(2.25rem, 1.5rem + 3.6vw, 4rem);
+
+  /* ── Spacing ─────────────────────────────────────────────────────── */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+  --sp-9: 6rem;
+
+  /* ── Layout ──────────────────────────────────────────────────────── */
+  --max-w: 1180px;
+  --max-w-prose: 68ch;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+
+  --header-h: 68px;
+}
+
+/**
+ * Light theme.
+ *
+ * Dark is the identity; light is a courtesy for readers who ask for it via the
+ * OS or the toggle. Same token names, so every component works in both without
+ * a single theme-specific rule.
+ */
+:root[data-theme='light'] {
+  --bg: #fbfcfe;
+  --bg-2: #f2f5fa;
+  --bg-3: #e7ecf4;
+  --bg-card: #ffffff;
+
+  --text: #0d1320;
+  --text-2: #495468;
+  --text-3: #5a6478;
+
+  --accent: #3f4fcc;
+  --accent-2: #5c4fbe;
+  --accent-3: #147156;
+  --accent-4: #a2492a;
+
+  --accent-soft: rgba(63, 79, 204, 0.1);
+  --accent-2-soft: rgba(92, 79, 190, 0.1);
+  --accent-3-soft: rgba(20, 113, 86, 0.1);
+  --accent-4-soft: rgba(162, 73, 42, 0.1);
+
+  --bd: rgba(13, 19, 32, 0.1);
+  --bd-md: rgba(13, 19, 32, 0.16);
+
+  --sh-sm: 0 1px 3px rgba(13, 19, 32, 0.08);
+  --sh: 0 6px 18px rgba(13, 19, 32, 0.08);
+  --sh-lg: 0 16px 40px rgba(13, 19, 32, 0.12);
+}

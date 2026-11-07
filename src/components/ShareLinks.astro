@@ -1,0 +1,130 @@
+---
+export interface Props {
+  title: string;
+  url: string;
+}
+
+const { title, url } = Astro.props;
+
+// Plain links to share endpoints — no third-party widgets, so no tracking
+// scripts and no extra JS. Copy-link is the only scripted part.
+const targets = [
+  {
+    label: 'Share on X',
+    href: `https://x.com/intent/post?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+    icon: 'M18.2 2H21l-6.6 7.5L21.8 22h-6.3l-4.3-6-5 6H3.4l7-8L2.6 2H9l4 5.6L18.2 2Z',
+  },
+  {
+    label: 'Share on LinkedIn',
+    href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+    icon: 'M4.5 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM3 9h3v12H3V9Zm6 0h2.9v1.7h.04A3.2 3.2 0 0 1 15 9c3 0 3.6 2 3.6 4.5V21h-3v-6.6c0-1.6-.03-3.6-2.2-3.6-2.2 0-2.5 1.7-2.5 3.5V21H9V9Z',
+  },
+  {
+    label: 'Share on WhatsApp',
+    href: `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
+    icon: 'M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.8-.2a12 12 0 0 1-5.6-4.9c-.6-1-.6-1.9-.4-2.4.2-.5.6-1 .9-1.2.2-.2.4-.2.6-.2h.4c.2 0 .3.1.5.5l.6 1.5c.1.2 0 .4-.1.5l-.4.5c-.1.2-.2.3 0 .5a8 8 0 0 0 3 2.6c.2.1.4.1.5-.1l.7-.8c.2-.2.3-.1.5 0l1.4.7c.3.2.4.3.4.4 0 .2 0 .7-.2 1Z',
+  },
+];
+---
+
+<div class="share">
+  <span class="label">Share</span>
+  <ul>
+    {
+      targets.map((t) => (
+        <li>
+          <a href={t.href} target="_blank" rel="noopener noreferrer" aria-label={t.label}>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d={t.icon} />
+            </svg>
+          </a>
+        </li>
+      ))
+    }
+    <li>
+      <button type="button" id="copy-link" data-url={url} aria-label="Copy link to this article">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
+          <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
+        </svg>
+      </button>
+    </li>
+  </ul>
+  <!-- Announces copy success to screen readers, which an icon swap alone would not. -->
+  <span class="sr-only" role="status" aria-live="polite" id="copy-status"></span>
+</div>
+
+<style>
+  .share {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+  }
+
+  ul {
+    display: flex;
+    gap: var(--sp-2);
+  }
+
+  a,
+  button {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r);
+    color: var(--text-2);
+    border: 1px solid var(--bd);
+    background: var(--bg-2);
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  a:hover,
+  button:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  button[data-copied='true'] {
+    color: var(--accent-3);
+    border-color: var(--accent-3);
+  }
+</style>
+
+<script>
+  const btn = document.getElementById('copy-link') as HTMLButtonElement | null;
+  const status = document.getElementById('copy-status');
+
+  btn?.addEventListener('click', async () => {
+    const url = btn.dataset.url;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      btn.dataset.copied = 'true';
+      if (status) status.textContent = 'Link copied to clipboard';
+      setTimeout(() => {
+        delete btn.dataset.copied;
+        if (status) status.textContent = '';
+      }, 2000);
+    } catch {
+      // Clipboard denied (insecure context or blocked permission). Say so
+      // rather than silently appearing to succeed.
+      if (status) status.textContent = 'Could not copy — copy the URL from the address bar';
+    }
+  });
+</script>

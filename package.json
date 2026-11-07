@@ -1,0 +1,30 @@
+{
+  "name": "qivy-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "qivy.in — practical AI, automation and smarter technology",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "verify": "node scripts/verify-site.mjs",
+    "og": "node scripts/make-og-image.mjs",
+    "migrate": "node scripts/migrate-content.mjs"
+  },
+  "dependencies": {
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
+    "astro": "^7.4.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "axe-core": "^4.14.0",
+    "playwright": "^1.65.0",
+    "turndown": "^7.2.5",
+    "turndown-plugin-gfm": "^1.0.2",
+    "typescript": "^6.0.3"
+  }
+}

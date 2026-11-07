@@ -1,0 +1,690 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import CategoryBadge from '../components/CategoryBadge.astro';
+import VerificationBadge from '../components/VerificationBadge.astro';
+import FollowCta from '../components/FollowCta.astro';
+import {
+  CATEGORY_META,
+  getFeedArticles,
+  getSpotlight,
+  articlePath,
+  formatDate,
+  isoDate,
+  readingTime,
+} from '../lib/content';
+
+const feed = await getFeedArticles(7);
+const [lead, ...rest] = feed;
+
+const aiSpot = await getSpotlight('ai');
+const autoSpot = await getSpotlight('automation');
+
+const tools = (await getCollection('tools'))
+  .filter((t) => t.data.featured)
+  .slice(0, 6);
+
+const pillars = [
+  {
+    category: 'ai' as const,
+    href: '/ai/',
+    topics: [
+      'AI tools and applications',
+      'ChatGPT and other AI assistants',
+      'Claude and coding agents',
+      'Local AI and open-source models',
+      'Prompt engineering',
+      'AI productivity tips',
+      'Image and video generation',
+    ],
+  },
+  {
+    category: 'automation' as const,
+    href: '/automation/',
+    topics: [
+      'n8n workflows',
+      'Python automation',
+      'Google Sheets automation',
+      'API integrations',
+      'Browser and desktop automation',
+      'Business process automation',
+      'Self-hosted automation',
+    ],
+  },
+  {
+    category: 'tips' as const,
+    href: '/tips/',
+    topics: [
+      'Windows tips',
+      'Browser productivity',
+      'Developer shortcuts',
+      'AI usage tips',
+      'Useful software features',
+      'Troubleshooting',
+      'Everyday technology solutions',
+    ],
+  },
+];
+
+const siteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Qivy',
+  alternateName: 'qivy.in',
+  url: 'https://qivy.in/',
+  description:
+    'Practical AI, intelligent automation and useful tech tips that save time and make everyday work easier.',
+  inLanguage: 'en',
+};
+---
+
+<BaseLayout
+  title="Qivy — Make Technology Work Smarter | AI & Automation"
+  description="Practical AI tools, intelligent automation and simple technology tips that help you work smarter, save time and do more."
+  schemas={[siteSchema]}
+>
+  {/* ── A. Hero ──────────────────────────────────────────────────────── */}
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="kicker">AI · Automation · Smarter technology</p>
+        <h1>Make Technology<br />Work <em>Smarter</em>.</h1>
+        <p class="lede">
+          Discover practical AI tools, intelligent automation and simple
+          technology tips that help you work smarter, save time and do more.
+        </p>
+        <div class="hero-btns">
+          <a class="btn btn--primary" href="/ai/">
+            Explore AI
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+          </a>
+          <a class="btn btn--ghost" href="/automation/">Discover Automation</a>
+        </div>
+      </div>
+
+      {/*
+        Decorative only — a schematic of the pipeline the site writes about.
+        aria-hidden because it carries no information the copy doesn't.
+      */}
+      <div class="hero-art" aria-hidden="true">
+        <div class="node node--in">
+          <span class="mono">INPUT</span>
+          <p>Repetitive task</p>
+        </div>
+        <div class="flow"><span></span><span></span><span></span></div>
+        <div class="node node--ai">
+          <span class="mono">AI</span>
+          <p>Decide &amp; draft</p>
+        </div>
+        <div class="flow"><span></span><span></span><span></span></div>
+        <div class="node node--auto">
+          <span class="mono">AUTOMATION</span>
+          <p>Run it on a schedule</p>
+        </div>
+        <div class="flow"><span></span><span></span><span></span></div>
+        <div class="node node--out">
+          <span class="mono">RESULT</span>
+          <p>Time back</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ── B. Core categories ───────────────────────────────────────────── */}
+  <section class="section wrap" aria-labelledby="pillars-h">
+    <div class="sec-head">
+      <div>
+        <p class="kicker">What Qivy covers</p>
+        <h2 id="pillars-h">Three things, done properly.</h2>
+      </div>
+      <p class="sec-desc">
+        Practical knowledge, not technology news. Every article should change
+        something you do in the next ten minutes.
+      </p>
+    </div>
+
+    <div class="pillars">
+      {
+        pillars.map((p) => (
+          <article class="pillar" data-cat={p.category}>
+            <CategoryBadge category={p.category} />
+            <ul>
+              {p.topics.map((t) => <li>{t}</li>)}
+            </ul>
+            <a class="pillar-link" href={p.href}>
+              Browse {CATEGORY_META[p.category].label}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" />
+              </svg>
+            </a>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  {/* ── C. Today's Tips ──────────────────────────────────────────────────
+       Renders only when there is something to show. CONTENT_STRATEGY.md
+       §6.3: an empty section does not render, and never renders filler. */}
+  {
+    feed.length > 0 && (
+      <section class="section wrap" aria-labelledby="feed-h">
+        <div class="sec-head">
+          <div>
+            <p class="kicker">Latest</p>
+            <h2 id="feed-h">Today's Tips</h2>
+          </div>
+          <p class="sec-desc">
+            Short, practical pieces — newest first. One useful thing at a time.
+          </p>
+        </div>
+
+        {lead && <div class="lead-card"><ArticleCard article={lead} featured /></div>}
+
+        {rest.length > 0 && (
+          <div class="feed-grid">
+            {rest.map((a) => <ArticleCard article={a} />)}
+          </div>
+        )}
+      </section>
+    )
+  }
+
+  {/* ── D & E. Spotlights ───────────────────────────────────────────── */}
+  {
+    (aiSpot || autoSpot) && (
+      <section class="section wrap" aria-labelledby="spot-h">
+        <h2 id="spot-h" class="sr-only">Spotlights</h2>
+        <div class="spots">
+          {
+            aiSpot && (
+              <article class="spot" data-cat="ai">
+                <p class="kicker">AI Spotlight</p>
+                <div class="spot-badges">
+                  <CategoryBadge category={aiSpot.data.category} />
+                  <VerificationBadge
+                    verification={aiSpot.data.verification}
+                    sourceCount={aiSpot.data.sources.length}
+                  />
+                </div>
+                <h3><a href={articlePath(aiSpot)}>{aiSpot.data.title}</a></h3>
+                <p class="spot-sum">{aiSpot.data.summary}</p>
+                <p class="spot-meta">
+                  <time datetime={isoDate(aiSpot.data.publishDate)}>
+                    {formatDate(aiSpot.data.publishDate)}
+                  </time>
+                  <span aria-hidden="true">·</span>
+                  {readingTime(aiSpot.body)} min read
+                </p>
+              </article>
+            )
+          }
+          {
+            autoSpot && (
+              <article class="spot" data-cat="automation">
+                <p class="kicker kicker--auto">Automation Spotlight</p>
+                <div class="spot-badges">
+                  <CategoryBadge category={autoSpot.data.category} />
+                  <VerificationBadge
+                    verification={autoSpot.data.verification}
+                    sourceCount={autoSpot.data.sources.length}
+                  />
+                </div>
+                <h3><a href={articlePath(autoSpot)}>{autoSpot.data.title}</a></h3>
+                <p class="spot-sum">{autoSpot.data.summary}</p>
+                <p class="spot-meta">
+                  <time datetime={isoDate(autoSpot.data.publishDate)}>
+                    {formatDate(autoSpot.data.publishDate)}
+                  </time>
+                  <span aria-hidden="true">·</span>
+                  {readingTime(autoSpot.body)} min read
+                </p>
+              </article>
+            )
+          }
+        </div>
+      </section>
+    )
+  }
+
+  {/* ── F. Useful tools ──────────────────────────────────────────────── */}
+  {
+    tools.length > 0 && (
+      <section class="section wrap" aria-labelledby="tools-h">
+        <div class="sec-head">
+          <div>
+            <p class="kicker">Reference</p>
+            <h2 id="tools-h">Useful Tools</h2>
+          </div>
+          <p class="sec-desc">
+            AI tools, automation platforms and productivity utilities. Pricing
+            is shown with the date it was checked — follow the link for the
+            current figure.
+          </p>
+        </div>
+
+        <div class="tools-grid">
+          {
+            tools.map((t) => (
+              <article class="tool">
+                <div class="tool-top">
+                  <h3>{t.data.name}</h3>
+                  <CategoryBadge category={t.data.category} />
+                </div>
+                <p class="tool-desc">{t.data.description}</p>
+                <dl>
+                  <dt>Use case</dt>
+                  <dd>{t.data.useCase}</dd>
+                  <dt>Pricing</dt>
+                  <dd>
+                    {t.data.pricing}
+                    <span class="checked">
+                      checked {formatDate(t.data.pricingCheckedOn)}
+                    </span>
+                  </dd>
+                </dl>
+                <a href={t.data.url} target="_blank" rel="noopener noreferrer">
+                  Official website
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M7 17 17 7M17 7H8m9 0v9" />
+                  </svg>
+                </a>
+              </article>
+            ))
+          }
+        </div>
+
+        <a class="all-tools" href="/tools/">See all tools →</a>
+      </section>
+    )
+  }
+
+  {/* ── G. Follow / newsletter slot ──────────────────────────────────── */}
+  <section class="section wrap">
+    <FollowCta />
+  </section>
+</BaseLayout>
+
+<style>
+  /* ── Hero ───────────────────────────────────────────────────────────── */
+  .hero {
+    position: relative;
+    padding-block: var(--sp-8) var(--sp-7);
+    border-bottom: 1px solid var(--bd);
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(
+        60% 80% at 80% 0%,
+        var(--accent-soft),
+        transparent 65%
+      ),
+      radial-gradient(
+        50% 60% at 10% 100%,
+        var(--accent-2-soft),
+        transparent 70%
+      );
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: var(--sp-8);
+    align-items: center;
+  }
+
+  h1 {
+    margin-bottom: var(--sp-5);
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin-top: var(--sp-6);
+  }
+  .hero-btns svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Hero art — the AI/automation pipeline, not a 3D printer. */
+  .hero-art {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .node {
+    padding: var(--sp-4) var(--sp-5);
+    background: var(--bg-2);
+    border: 1px solid var(--bd);
+    border-left: 3px solid var(--bd-md);
+    border-radius: var(--r);
+  }
+  .node .mono {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    letter-spacing: 0.14em;
+    color: var(--text-3);
+  }
+  .node p {
+    margin-top: var(--sp-1);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+  .node--ai {
+    border-left-color: var(--accent);
+    background: linear-gradient(90deg, var(--accent-soft), var(--bg-2) 60%);
+  }
+  .node--ai .mono {
+    color: var(--accent);
+  }
+  .node--auto {
+    border-left-color: var(--accent-2);
+    background: linear-gradient(90deg, var(--accent-2-soft), var(--bg-2) 60%);
+  }
+  .node--auto .mono {
+    color: var(--accent-2);
+  }
+  .node--out {
+    border-left-color: var(--accent-3);
+  }
+  .node--out .mono {
+    color: var(--accent-3);
+  }
+
+  .flow {
+    display: flex;
+    gap: 5px;
+    padding-left: var(--sp-5);
+  }
+  .flow span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-3);
+  }
+
+  /* ── Section heads ──────────────────────────────────────────────────── */
+  .sec-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: var(--sp-6);
+    margin-bottom: var(--sp-6);
+  }
+  .sec-desc {
+    max-width: 38ch;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .kicker--auto {
+    color: var(--accent-2);
+  }
+
+  /* ── Pillars ────────────────────────────────────────────────────────── */
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+
+  .pillar {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-5);
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-l);
+    transition: border-color 0.2s ease;
+  }
+  .pillar:hover {
+    border-color: var(--bd-md);
+  }
+
+  .pillar ul {
+    margin: var(--sp-5) 0 var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    flex: 1;
+  }
+  .pillar li {
+    position: relative;
+    padding-left: var(--sp-4);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .pillar li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.45;
+  }
+
+  .pillar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 44px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+
+  }
+  .pillar-link svg {
+    width: 15px;
+    height: 15px;
+    transition: transform 0.18s ease;
+  }
+  .pillar:hover .pillar-link svg {
+    transform: translateX(3px);
+  }
+  .pillar[data-cat='ai'] .pillar-link {
+    color: var(--accent);
+  }
+  .pillar[data-cat='automation'] .pillar-link {
+    color: var(--accent-2);
+  }
+  .pillar[data-cat='tips'] .pillar-link {
+    color: var(--accent-3);
+  }
+
+  /* ── Feed ───────────────────────────────────────────────────────────── */
+  .lead-card {
+    margin-bottom: var(--sp-4);
+  }
+  .feed-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+
+  /* ── Spotlights ─────────────────────────────────────────────────────── */
+  .spots {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-4);
+  }
+
+  .spot {
+    padding: var(--sp-6);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-xl);
+    background: var(--bg-2);
+  }
+  .spot[data-cat='ai'] {
+    background: linear-gradient(145deg, var(--accent-soft), var(--bg-2) 55%);
+  }
+  .spot[data-cat='automation'] {
+    background: linear-gradient(145deg, var(--accent-2-soft), var(--bg-2) 55%);
+  }
+
+  .spot-badges {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--sp-4);
+  }
+
+  .spot h3 {
+    font-size: var(--fs-xl);
+    line-height: 1.3;
+  }
+  .spot h3 a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .spot-sum {
+    margin-top: var(--sp-3);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+
+  .spot-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-5);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+
+  /* ── Tools ──────────────────────────────────────────────────────────── */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+
+  .tool {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-5);
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-l);
+  }
+  .tool-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+  }
+  .tool h3 {
+    font-size: var(--fs-lg);
+  }
+  .tool-desc {
+    margin-top: var(--sp-3);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .tool dl {
+    margin-top: var(--sp-4);
+    flex: 1;
+  }
+  .tool dt {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    margin-top: var(--sp-3);
+  }
+  .tool dd {
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    margin-top: var(--sp-1);
+  }
+  .checked {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+  .tool > a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 44px;
+    margin-top: var(--sp-4);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .tool > a svg {
+    width: 14px;
+    height: 14px;
+  }
+  .tool > a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .all-tools {
+    display: inline-block;
+    margin-top: var(--sp-5);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .all-tools:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────── */
+  @media (max-width: 1000px) {
+    .feed-grid,
+    .tools-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+      gap: var(--sp-7);
+    }
+    .pillars {
+      grid-template-columns: 1fr;
+    }
+    .spots {
+      grid-template-columns: 1fr;
+    }
+    .sec-head {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--sp-4);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .feed-grid,
+    .tools-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

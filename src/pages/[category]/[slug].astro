@@ -1,0 +1,35 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { getPublishedArticles, type Article } from '../../lib/content';
+
+export interface Props {
+  article: Article;
+}
+
+/**
+ * Article pages for /<category>/<slug>/.
+ *
+ * Articles with a `subcategory` are excluded — they are served by the
+ * dedicated /maker/filaments/[slug] route instead, so a filament page does
+ * not get two URLs. Two URLs for one article is a duplicate-content problem
+ * and splits whatever ranking it earns.
+ */
+export const getStaticPaths: GetStaticPaths = async () => {
+  const articles = await getPublishedArticles();
+  return articles
+    .filter((a) => !a.data.subcategory)
+    .map((article) => ({
+      params: { category: article.data.category, slug: article.id },
+      props: { article },
+    }));
+};
+
+const { article } = Astro.props;
+const { Content, headings } = await render(article);
+---
+
+<ArticleLayout article={article} headings={headings}>
+  <Content />
+</ArticleLayout>

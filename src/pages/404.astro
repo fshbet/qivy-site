@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import { getFeedArticles } from '../lib/content';
+
+const recent = await getFeedArticles(3);
+---
+
+<BaseLayout
+  title="Page not found | Qivy"
+  description="That page doesn't exist. Here's where to go instead."
+  noindex
+>
+  <section class="nf wrap">
+    <p class="code">404</p>
+    <h1>That page doesn't exist</h1>
+    <p class="lede">
+      The link may be out of date, or the address may have a typo. Qivy was
+      rebuilt in 2026 and article addresses changed, so an old bookmark might
+      land here.
+    </p>
+
+    <div class="actions">
+      <a class="btn btn--primary" href="/">Go to the homepage</a>
+      <a class="btn btn--ghost" href="/ai/">Browse AI</a>
+      <a class="btn btn--ghost" href="/maker/">Maker archive</a>
+    </div>
+  </section>
+
+  {
+    recent.length > 0 && (
+      <section class="section wrap" aria-labelledby="r-h">
+        <h2 id="r-h">Recent articles</h2>
+        <div class="grid">
+          {recent.map((a) => <ArticleCard article={a} />)}
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .nf {
+    padding-block: var(--sp-9) var(--sp-7);
+    text-align: center;
+  }
+  .code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-2xl);
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  h1 {
+    margin-top: var(--sp-4);
+    font-size: var(--fs-3xl);
+  }
+  .lede {
+    margin: var(--sp-4) auto 0;
+    max-width: 52ch;
+  }
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin-top: var(--sp-6);
+  }
+  h2 {
+    font-size: var(--fs-xl);
+    margin-bottom: var(--sp-5);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+  }
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

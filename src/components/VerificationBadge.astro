@@ -1,0 +1,79 @@
+---
+/**
+ * Tested vs Researched.
+ *
+ * This badge is the mechanism that makes a daily, partly-automated cadence
+ * trustworthy instead of suspicious — see CONTENT_STRATEGY.md §4.4 rules 7-8.
+ *
+ *   tested     — a human actually ran it. Only a human can set this.
+ *   researched — verified against documentation, not personally run. Forced
+ *                default for every article the pipeline produces.
+ *
+ * Showing this openly is the point. Hiding it would make the automation a
+ * thing the reader has to guess about.
+ */
+export interface Props {
+  verification: 'tested' | 'researched';
+  sourceCount?: number;
+}
+
+const { verification, sourceCount = 0 } = Astro.props;
+
+const tested = verification === 'tested';
+
+const label = tested ? 'Tested' : 'Researched';
+const title = tested
+  ? 'Written from first-hand use — these steps were actually run.'
+  : `Verified against official documentation${
+      sourceCount ? ` (${sourceCount} source${sourceCount === 1 ? '' : 's'})` : ''
+    }, not personally tested.`;
+---
+
+<span class="vb" data-kind={verification} title={title}>
+  {
+    tested ? (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+        <path d="m5 13 4 4L19 7" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M12 3 3 7v6c0 5 3.8 8.3 9 9 5.2-.7 9-4 9-9V7l-9-4Z" />
+      </svg>
+    )
+  }
+  <span>{label}</span>
+  <span class="sr-only">. {title}</span>
+</span>
+
+<style>
+  .vb {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: help;
+  }
+
+  .vb svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+
+  .vb[data-kind='tested'] {
+    color: var(--accent-3);
+    background: var(--accent-3-soft);
+    border: 1px solid color-mix(in srgb, var(--accent-3) 35%, transparent);
+  }
+
+  .vb[data-kind='researched'] {
+    color: var(--text-2);
+    background: var(--bg-3);
+    border: 1px solid var(--bd-md);
+  }
+</style>

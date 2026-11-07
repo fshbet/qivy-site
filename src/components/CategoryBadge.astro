@@ -1,0 +1,50 @@
+---
+import { CATEGORY_META, type Category } from '../content.config';
+
+export interface Props {
+  category: Category;
+  /** Render as a link to the category hub. */
+  href?: boolean;
+}
+
+const { category, href = false } = Astro.props;
+const meta = CATEGORY_META[category];
+
+const soft: Record<Category, string> = {
+  ai: 'var(--accent-soft)',
+  automation: 'var(--accent-2-soft)',
+  tips: 'var(--accent-3-soft)',
+  maker: 'var(--accent-4-soft)',
+};
+
+const Tag = href ? 'a' : 'span';
+---
+
+<Tag
+  class="badge"
+  href={href ? `/${meta.slug}/` : undefined}
+  style={`--c:${meta.accent};--cs:${soft[category]}`}
+>
+  {meta.label}
+</Tag>
+
+<style>
+  .badge {
+    display: inline-block;
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: 999px;
+    background: var(--cs);
+    color: var(--c);
+    border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+  }
+
+  a.badge:hover {
+    background: color-mix(in srgb, var(--c) 22%, transparent);
+  }
+</style>

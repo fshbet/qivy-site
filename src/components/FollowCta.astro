@@ -1,0 +1,93 @@
+---
+/**
+ * Replaces the previous site's newsletter block.
+ *
+ * The old one was:
+ *   <button onclick="alert('Subscribed!')">Subscribe free</button>
+ * beside an unwired <input type="email"> — no <form>, no backend anywhere in
+ * the file. It took an address, discarded it, and told the visitor they had
+ * subscribed.
+ *
+ * Per REDESIGN_PLAN.md §6.4 that control does not ship in any form. Until a
+ * real provider is chosen this offers RSS, which genuinely works today. When
+ * a provider is picked, a real <form> with validation and error/success
+ * states replaces the body of this component — nothing else has to change.
+ */
+export interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+---
+
+<section class:list={['cta', { 'cta--compact': compact }]} aria-labelledby="cta-h">
+  <div class="inner">
+    <div>
+      <h2 id="cta-h">Stay Ahead. Work Smarter.</h2>
+      <p>
+        Get practical AI tips, automation ideas and useful technology tricks —
+        one useful thing at a time. Follow the feed in any reader.
+      </p>
+    </div>
+
+    <div class="actions">
+      <a class="btn btn--primary" href="/rss.xml">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+          <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" />
+          <circle cx="5" cy="19" r="1.6" fill="currentColor" stroke="none" />
+        </svg>
+        Subscribe via RSS
+      </a>
+      <a class="btn btn--ghost" href="/ai/">Browse AI</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta {
+    padding: var(--sp-7);
+    background:
+      radial-gradient(
+        120% 140% at 0% 0%,
+        var(--accent-soft),
+        transparent 60%
+      ),
+      var(--bg-2);
+    border: 1px solid var(--bd);
+    border-radius: var(--r-xl);
+  }
+
+  .cta--compact {
+    padding: var(--sp-6);
+  }
+
+  .inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-6);
+    flex-wrap: wrap;
+  }
+
+  h2 {
+    font-size: var(--fs-2xl);
+  }
+
+  p {
+    margin-top: var(--sp-3);
+    max-width: 52ch;
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+
+  .actions svg {
+    width: 16px;
+    height: 16px;
+  }
+</style>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://qivy.in/sitemap-index.xml

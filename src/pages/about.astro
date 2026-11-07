@@ -1,0 +1,164 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import FollowCta from '../components/FollowCta.astro';
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: Astro.site?.href },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'About',
+      item: new URL('/about/', Astro.site).href,
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title="About Qivy — practical AI & automation knowledge"
+  description="Qivy is a practical knowledge platform for AI, automation and useful technology tips. What it covers, how articles are verified, and how it is built."
+  schemas={[breadcrumbSchema]}
+>
+  <section class="hdr wrap">
+    <Breadcrumbs crumbs={[{ label: 'About' }]} />
+    <h1>About Qivy</h1>
+    <p class="lede">
+      Qivy is a practical knowledge platform for AI, automation and everyday
+      technology. Not a news portal — a place to find one useful thing and
+      apply it.
+    </p>
+  </section>
+
+  <div class="wrap body">
+    <div class="prose">
+      <h2>What Qivy is for</h2>
+      <p>
+        There is no shortage of writing about what AI might do. There is much
+        less about what you can do with it this afternoon. Qivy exists for the
+        second kind: short, specific, practical pieces that change something
+        in how you work.
+      </p>
+      <p>The test every article has to pass is simple — <strong>can you do
+      something differently in the next ten minutes?</strong> If not, it
+      doesn't get published.</p>
+
+      <h2>What it covers</h2>
+      <p>Four areas, weighted deliberately unequally:</p>
+      <ul>
+        <li>
+          <strong>AI</strong> — tools and applications, assistants like
+          ChatGPT and Claude, coding agents, local and open-source models,
+          prompting, and the features people pay for but never use.
+        </li>
+        <li>
+          <strong>Automation</strong> — n8n workflows, Python scripts, Google
+          Sheets, API integrations, webhooks and self-hosted setups that take
+          repetitive work off your hands.
+        </li>
+        <li>
+          <strong>Tips &amp; Tricks</strong> — Windows, browsers, editors and
+          the everyday software you already have open.
+        </li>
+        <li>
+          <strong>Tools</strong> — a reference list rather than an article
+          stream, with the use case and the date each price was checked.
+        </li>
+      </ul>
+      <p>
+        Pricing and availability are written India-first where that changes the
+        answer, and left global where it doesn't — a prompting technique isn't
+        regional, and pretending otherwise just pads the article.
+      </p>
+
+      <h2>How articles are verified</h2>
+      <p>
+        Every article carries one of two badges, and the difference is real:
+      </p>
+      <ul>
+        <li>
+          <strong>Tested</strong> — someone actually ran this. The steps come
+          from doing it, not reading about it.
+        </li>
+        <li>
+          <strong>Researched</strong> — verified against official
+          documentation, but not personally run. The sources are listed at the
+          bottom of the article so you can check them yourself.
+        </li>
+      </ul>
+      <p>
+        That distinction matters because part of Qivy's publishing is assisted
+        by automation, and being straight about it is the whole point. A
+        drafted article is never marked <em>Tested</em> — only a human who
+        actually ran the steps can set that. Nothing is published without a
+        person reading it first.
+      </p>
+      <p>What Qivy will not do: invent benchmarks, invent pricing, invent
+      personal experience, rewrite someone else's article, or publish old
+      information as though it were current.</p>
+
+      <h2>The Maker archive</h2>
+      <p>
+        Qivy started out writing about 3D printing — printer reviews, slicer
+        settings, and a filament knowledge base covering PLA, PETG, TPU, ABS
+        and Nylon. That material is still here, in the
+        <a href="/maker/">Maker archive</a>, because it is still useful and
+        people still find it. It simply isn't what the site leads with any
+        more.
+      </p>
+
+      <h2>How this site is built</h2>
+      <p>
+        Deliberately boring, because boring keeps working. Qivy is a static
+        site: articles are Markdown files, built by
+        <a href="https://astro.build" target="_blank" rel="noopener noreferrer">Astro</a>
+        into plain HTML and served from GitHub Pages. Almost no JavaScript
+        reaches your browser — code highlighting happens at build time, and the
+        only interactive pieces are the theme toggle, the menu and the
+        copy-code buttons.
+      </p>
+      <p>
+        Publishing works through pull requests: a draft arrives as a proposed
+        change, gets reviewed and edited, and goes live when it is merged.
+        That gives every article a review step and a permanent history,
+        without a content management system to maintain.
+      </p>
+
+      <h2 id="contact">Contact</h2>
+      <p>
+        Found an error, or something that no longer works the way an article
+        says? That's worth telling me about — corrections are the most useful
+        feedback a site like this gets.
+      </p>
+      <p>
+        <a href="https://github.com/fshbet" target="_blank" rel="noopener noreferrer">
+          github.com/fshbet
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <section class="section wrap">
+    <FollowCta compact />
+  </section>
+</BaseLayout>
+
+<style>
+  .hdr {
+    padding-block: var(--sp-6);
+    border-bottom: 1px solid var(--bd);
+  }
+  h1 {
+    margin-top: var(--sp-5);
+    font-size: var(--fs-3xl);
+  }
+  .lede {
+    margin-top: var(--sp-4);
+  }
+  .body {
+    padding-top: var(--sp-7);
+  }
+</style>

@@ -1,0 +1,69 @@
+name: Build and deploy to GitHub Pages
+
+# Deploys the built site to GitHub Pages.
+#
+# IMPORTANT — before the first run, the repository's Pages source must be
+# changed from "Deploy from a branch" to "GitHub Actions" in
+# Settings -> Pages. Until that is done this workflow builds successfully but
+# nothing it produces is served, and qivy.in keeps serving the old root
+# index.html. See DEPLOYMENT.md.
+
+on:
+  push:
+    branches: [main]
+  # A daily build so articles with a future publishDate go live on their date
+  # without anyone pushing a commit. 02:30 UTC = 08:00 IST.
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once; let an in-flight one finish rather than
+# cancelling it half-way through a Pages publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Fails the build if any article is missing required frontmatter or an
+      # SEO field is the wrong length — the content-quality gate.
+      - name: Build
+        run: npm run build
+
+      - name: Check colour contrast
+        run: npm run check:contrast
+
+      - name: Verify built site
+        run: |
+          npx playwright install --with-deps chromium
+          npm run verify
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

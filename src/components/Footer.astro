@@ -1,0 +1,176 @@
+---
+const year = new Date().getFullYear();
+
+const columns = [
+  {
+    heading: 'Content',
+    links: [
+      { href: '/ai/', label: 'AI' },
+      { href: '/automation/', label: 'Automation' },
+      { href: '/tips/', label: 'Tips & Tricks' },
+      { href: '/tools/', label: 'Tools' },
+    ],
+  },
+  {
+    heading: 'Archive',
+    links: [
+      { href: '/maker/', label: 'Maker' },
+      { href: '/maker/filaments/', label: 'Filament knowledge base' },
+    ],
+  },
+  {
+    heading: 'Site',
+    links: [
+      { href: '/about/', label: 'About Qivy' },
+      { href: '/about/#contact', label: 'Contact' },
+      { href: '/privacy/', label: 'Privacy Policy' },
+      { href: '/terms/', label: 'Terms' },
+    ],
+  },
+];
+---
+
+<footer class="ftr">
+  <div class="wrap">
+    <div class="grid">
+      <div class="about">
+        <a class="brand" href="/">qivy<span aria-hidden="true">.</span></a>
+        <p>
+          Practical AI, intelligent automation and useful tech tips that save
+          time and make everyday work easier.
+        </p>
+        <a class="feed" href="/rss.xml">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" />
+            <circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none" />
+          </svg>
+          RSS feed
+        </a>
+      </div>
+
+      {
+        columns.map((col) => (
+          <nav class="col" aria-label={col.heading}>
+            <h2>{col.heading}</h2>
+            <ul>
+              {col.links.map((l) => (
+                <li><a href={l.href}>{l.label}</a></li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
+    </div>
+
+    <div class="base">
+      <p>&copy; {year} Qivy · AI · Automation · Smarter technology</p>
+      <p class="mono">MAKE TECHNOLOGY WORK SMARTER</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .ftr {
+    margin-top: var(--sp-9);
+    border-top: 1px solid var(--bd);
+    background: var(--bg-2);
+    padding-block: var(--sp-7) var(--sp-5);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.6fr repeat(3, 1fr);
+    gap: var(--sp-6);
+  }
+
+  .brand {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.045em;
+  }
+  .brand span {
+    color: var(--accent);
+  }
+
+  .about p {
+    margin-top: var(--sp-3);
+    max-width: 38ch;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+
+  .feed {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-4);
+    min-height: 44px;
+    font-size: var(--fs-sm);
+    color: var(--accent);
+  }
+  .feed svg {
+    width: 15px;
+    height: 15px;
+  }
+  .feed:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .col h2 {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+    margin-bottom: var(--sp-4);
+  }
+
+  .col li + li {
+    margin-top: var(--sp-1);
+  }
+
+  .col a {
+    display: inline-block;
+    padding-block: var(--sp-2);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    transition: color 0.15s ease;
+  }
+  .col a:hover {
+    color: var(--accent);
+  }
+
+  .base {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-top: var(--sp-7);
+    padding-top: var(--sp-5);
+    border-top: 1px solid var(--bd);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .about {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .base {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

@@ -1,0 +1,133 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+export interface Props {
+  /** <title> text. Required — every page gets its own. */
+  title: string;
+  /** Meta description. Required — every page gets its own. */
+  description: string;
+  /** Path-relative or absolute OG image. Falls back to the site default. */
+  image?: string;
+  /** 'website' for hubs, 'article' for articles. */
+  ogType?: 'website' | 'article';
+  /** Article-only Open Graph fields. */
+  publishedTime?: string;
+  modifiedTime?: string;
+  /** JSON-LD objects to emit. */
+  schemas?: Record<string, unknown>[];
+  /** Set true on pages that must not be indexed. */
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  image = '/og-default.png',
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
+  schemas = [],
+  noindex = false,
+} = Astro.props;
+
+// Astro.site comes from astro.config.mjs; absolute URLs are required for
+// canonical, OG and structured data to be valid.
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL(image, Astro.site).href;
+const siteName = 'Qivy';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <meta name="theme-color" content="#0b0f1a" />
+    <meta name="generator" content={Astro.generator} />
+
+    {/* Open Graph */}
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content="en_IN" />
+    {publishedTime && (
+      <meta property="article:published_time" content={publishedTime} />
+    )}
+    {modifiedTime && (
+      <meta property="article:modified_time" content={modifiedTime} />
+    )}
+
+    {/* Twitter / X */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    {/* Feeds */}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="Qivy — practical AI & automation"
+      href={new URL('/rss.xml', Astro.site).href}
+    />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {/* Fonts. display=swap so text paints immediately rather than blocking. */}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+
+    {
+      schemas.map((schema) => (
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify(schema)}
+        />
+      ))
+    }
+
+    {/*
+      Theme resolution runs before first paint so a reader who chose light
+      never sees a dark flash. Small enough to inline; must stay inline.
+    */}
+    <script is:inline>
+      (() => {
+        try {
+          const saved = localStorage.getItem('qivy-theme');
+          const theme =
+            saved ??
+            (window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark');
+          if (theme === 'light')
+            document.documentElement.dataset.theme = 'light';
+        } catch {
+          /* localStorage blocked — dark default is fine. */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Nav />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
