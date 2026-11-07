@@ -211,7 +211,7 @@ An article page is roughly **1/10th** the old payload, and a reader downloads on
 2. **The GitHub credential for the pipeline.** No GitHub credential exists in n8n; the four GitHub-facing nodes have an empty placeholder. The workflow cannot run until you add a token with `repo` scope.
 3. **The notification recipient** in `Notify admin` is `CHANGE_ME@example.com`. Left as a placeholder rather than guessing — publishing your personal address was not mine to decide.
 4. **Contact details.** About, Privacy and Terms point at `github.com/fshbet`. If you want an email published, say which.
-5. **`/Tools/*.zip`** are no longer served (§4). If they need to stay downloadable, they can be republished under `/downloads/`.
+5. ~~`/Tools/*.zip` are no longer served.~~ **Decided 2026-11-07: leave them off.** The files stay in the repository; they are simply not published. Republishing them under `/downloads/` remains a two-file copy if that ever changes.
 6. **Analytics** — none installed, so nothing about readership is measurable yet. Plausible is paid; Cloudflare Web Analytics is free. Your call.
 7. **Newsletter provider** — the honest RSS link is in place. Naming a provider turns it into a real form.
 
@@ -296,7 +296,9 @@ CI ran the same gates as local, on Linux: `npm ci`, `npm run build`, `npm run ch
 
 `https://qivy.in/Tools/` and the two zip files under it now return `404`. They were served before.
 
-Checked before reporting: the old `index.html` contained **no link to them** — `grep -oE 'Tools/[A-Za-z0-9._%-]+' index.html` returns nothing. They were uploaded files with no route into them from the site, so there is no inbound link on the site to break. The files remain in the repository and nothing was deleted. If any direct link to them was shared elsewhere, that link is now broken — say so and they can be restored.
+Checked before reporting: the old `index.html` contained **no link to them** — `grep -oE 'Tools/[A-Za-z0-9._%-]+' index.html` returns nothing. They were uploaded files with no route into them from the site, so there is no inbound link on the site to break. The files remain in the repository and nothing was deleted.
+
+**Decided: leave them unpublished.** They stay in the repo as source material, off the web.
 
 ### 11.3 Rollback
 
