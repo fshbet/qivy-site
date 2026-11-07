@@ -156,13 +156,27 @@ const pickTopic = node({
 });
 
 // ── Draft ─────────────────────────────────────────────────────────────────
+// The drafting model goes through OpenRouter, which turns "use a different
+// provider" into editing one string rather than editing the workflow.
+// 'openai/gpt-4.1' is the exact model this pipeline was built and prompted
+// against — only the route to it changed.
+//
+// CHANGING PROVIDER: edit MODEL to any id from
+// https://openrouter.ai/api/v1/models. 'anthropic/claude-sonnet-4.5',
+// 'google/gemini-2.5-flash' and 'deepseek/deepseek-chat' all work with
+// nothing else touched. Verified ids and current prices: n8n/README.md.
+//
+// RUNNING IT FREE AND LOCAL: replace this one sub-node with an Ollama Chat
+// Model. Nothing else in the workflow changes. See n8n/README.md.
+const MODEL = 'openai/gpt-4.1';
+
 const draftModel = languageModel({
-  type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
-  version: 1.3,
+  type: '@n8n/n8n-nodes-langchain.lmChatOpenRouter',
+  version: 1,
   config: {
     name: 'Drafting model',
-    parameters: { model: { __rl: true, mode: 'list', value: 'gpt-4.1' } },
-    credentials: { openAiApi: { id: '4lyNzFbPfB85ZtSh', name: 'OpenAI account' } },
+    parameters: { model: MODEL },
+    credentials: { openRouterApi: { id: 'amA9CBrla6PgucHX', name: 'OpenRouter Fshbet' } },
     position: [60, 200],
   },
 });
@@ -566,7 +580,8 @@ const noteSetup = sticky(
     '## Before the first run',
     '',
     '1. Create a **GitHub** credential (personal access token with',
-    '   `repo` scope) and select it on the three GitHub nodes.',
+    '   `repo` scope) and select it on all four GitHub nodes — including',
+    '   the two HTTP Request ones, which credential auto-assignment skips.',
     '2. Set the recipient on **Notify admin** — it is a placeholder.',
     '3. Add topic rows to the **Qivy Content Ledger** data table with',
     '   `status = idea`, `topic`, and `category`',
@@ -574,11 +589,41 @@ const noteSetup = sticky(
     '4. Seed the ledger with existing article slugs so they are never',
     '   re-proposed (see n8n/README.md).',
     '',
-    'Swap the drafting model for Ollama by replacing the',
-    '**Drafting model** sub-node with an Ollama Chat Model.',
+    'This workflow is **inactive**. Nothing runs until you activate it.',
   ].join('\n'),
   [readLedger, pickTopic],
   { color: 3 },
+);
+
+// The provider switch, stated on the canvas so it is findable without
+// reading this file. Prices were read from the OpenRouter API on
+// 2026-11-07; they are not guesses, but they do go stale.
+const noteModel = sticky(
+  [
+    '## Changing the model',
+    '',
+    '**Drafting model** is an **OpenRouter** node, so the provider is',
+    'one field, not a workflow change.',
+    '',
+    'Edit its `model` to switch. Verified working ids:',
+    '',
+    '| Model | In / Out per 1M tokens |',
+    '|---|---|',
+    '| `openai/gpt-4.1` *(current)* | $2.00 / $8.00 |',
+    '| `anthropic/claude-sonnet-4.5` | $3.00 / $15.00 |',
+    '| `google/gemini-2.5-flash` | $0.30 / $2.50 |',
+    '| `deepseek/deepseek-chat` | $0.32 / $0.89 |',
+    '| `openai/gpt-4.1-mini` | $0.40 / $1.60 |',
+    '',
+    'Prices read from the OpenRouter API on 2026-11-07 — re-check',
+    'before relying on them.',
+    '',
+    '**Free and local:** delete this sub-node and drag in an',
+    '**Ollama Chat Model** (the credential already exists). Nothing',
+    'else in the workflow changes.',
+  ].join('\n'),
+  [draftModel],
+  { color: 5 },
 );
 
 const noteGuardrails = sticky(
@@ -613,6 +658,7 @@ export default workflow('qivy-daily-content', 'Qivy — Daily Content Pipeline')
   .to(updateLedger)
   .to(notifyAdmin)
   .add(noteSetup)
+  .add(noteModel)
   .add(noteGuardrails)
   .add(noteGate)
   .group('Topic selection', [readLedger, pickTopic], {

@@ -3,7 +3,17 @@
 **Workflow:** [Qivy — Daily Content Pipeline](https://n8n.qivy.in/workflow/rzIuwCIMlbw1qiGm) (`rzIuwCIMlbw1qiGm`)
 **Instance:** `n8n.qivy.in`
 **Data table:** `Qivy Content Ledger` (`nt4YIGvd4r5gNydo`)
-**Status:** created, validated, **not activated** — see [Before the first run](#before-the-first-run)
+**Status:** created and validated. **Not activated, no GitHub credential, never executed.**
+
+### Does this publish an article every day?
+
+**Not today, and not without you.** Three separate things stand between this workflow and a daily article:
+
+1. **It is inactive.** `active: false`. The 06:00 schedule does not fire.
+2. **It has no GitHub credential**, so even a manual run would fail at the branch-creation step.
+3. **By design, it never publishes.** It drafts and opens a pull request, then stops. An article goes live only when a human merges that PR — which triggers the site build.
+
+So the realistic cadence once it is wired up is **one draft per day, and one published article per day only if you review and merge one per day.** The schedule automates the writing, not the deciding. That gate is deliberate: the model cannot verify its own instructions, and an unreviewed article carries your name.
 
 Source of record: [`qivy-daily-content.workflow.ts`](./qivy-daily-content.workflow.ts). Edit there and re-apply rather than only editing in the n8n UI, so the pipeline stays reviewable alongside the site.
 
@@ -18,7 +28,7 @@ Read content ledger            (Data Table — every row)
    ↓
 Pick topic + duplicate check   (Code — Jaccard similarity)
    ↓
-Research and draft article     (AI Agent + OpenAI)
+Research and draft article     (AI Agent + OpenRouter — any model)
    ↓
 Generate thumbnail             (disabled by default)
    ↓
@@ -130,18 +140,56 @@ Before activating:
 
 ---
 
+## Choosing the model
+
+The `Drafting model` sub-node is an **OpenRouter Chat Model**. That is the whole configuration surface: OpenRouter fronts OpenAI, Anthropic, Google, DeepSeek, Meta and others behind one key, so changing provider is **editing one field**, not editing the workflow.
+
+Current value: `openai/gpt-4.1` — the exact model the prompt was written against. Only the route to it changed.
+
+### Switching provider
+
+Open **Drafting model** and change `model` to any id from <https://openrouter.ai/api/v1/models>.
+
+| Model id | In / Out per 1M tokens | Notes |
+|---|---|---|
+| `openai/gpt-4.1` | $2.00 / $8.00 | Current. What the prompt was tuned against. |
+| `anthropic/claude-sonnet-4.5` | $3.00 / $15.00 | Strongest at long-form prose and following the structure rules. |
+| `google/gemini-2.5-flash` | $0.30 / $2.50 | Cheapest credible option for this job. |
+| `deepseek/deepseek-chat` | $0.32 / $0.89 | Cheapest overall. |
+| `openai/gpt-4.1-mini` | $0.40 / $1.60 | Same family, lower cost. |
+
+Model ids and prices were read from the OpenRouter API on **2026-11-07** and are accurate as of that date. Prices change; re-check before budgeting on them. Model availability also changes — if an id is rejected, look it up in the list above rather than guessing at a name.
+
+**Not verified:** no article has been drafted through any of these models yet. The pipeline has never run end to end, because it has no GitHub credential. Output quality per model is therefore an expectation, not a measurement.
+
+### Using a provider directly instead of OpenRouter
+
+OpenRouter adds a routing hop. To go direct, delete the `Drafting model` sub-node and drag in the matching chat model node. Credentials that already exist on this instance:
+
+| Want | Node to use | Credential already present |
+|---|---|---|
+| OpenAI direct | OpenAI Chat Model | `OpenAI account` |
+| Groq | Groq Chat Model | `Groq account` |
+| Local, free | Ollama Chat Model | `Ollama account` |
+
+Anthropic and Google have no credential on this instance yet; add one first if you want those direct rather than through OpenRouter.
+
+Nothing else in the workflow changes — the agent, the validator, the GitHub steps and the ledger are all provider-agnostic.
+
+### Running locally on Ollama
+
+To draft at no API cost, use the **Ollama Chat Model** with the existing `Ollama account` credential.
+
+Honest expectation: a small local model is fine for ideation, slugs and metadata, but weaker at the tightly-structured, well-sourced prose the editorial rules demand — and the validator is strict, so a weak model will fail the run rather than publish something poor. The practical split is cloud for drafting, local for the mechanical steps.
+
+---
+
 ## Costs
 
-- **OpenAI** — one drafting call per day on the existing `OpenAI account` credential. No new subscription.
-- **Thumbnail generation** — the `Generate thumbnail (disabled)` node is **off**. Every run would otherwise be a paid image call, and the site already renders a category-tinted placeholder for articles without an image. Enable it if you want generated thumbnails.
+- **Drafting** — one call per day through OpenRouter. A 300–700 word article with this system prompt is a small request; at `openai/gpt-4.1` prices that is cents per article, not dollars. Exact cost is not measured, because no run has happened yet.
+- **Thumbnail generation** — the `Generate thumbnail (disabled)` node is **off**. Every run would otherwise be a paid image call, and the site already renders a category-tinted placeholder for articles without an image. It still uses the OpenAI credential directly, not OpenRouter. Enable it only if you want generated thumbnails.
 - **GitHub Actions** — free on public repositories.
 - **n8n** — your existing self-hosted instance.
-
-### Running on Ollama instead
-
-To draft locally at no API cost, replace the `Drafting model` sub-node with an **Ollama Chat Model** pointed at the existing `Ollama account` credential.
-
-Honest expectation: a small local model is fine for ideation, slugs and metadata, but weaker at the tightly-structured, well-sourced prose the editorial rules demand. The practical split is cloud for drafting, local for the mechanical steps.
 
 ---
 
