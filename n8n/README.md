@@ -3,7 +3,7 @@
 **Workflow:** [Qivy — Daily Content Pipeline](https://n8n.qivy.in/workflow/rzIuwCIMlbw1qiGm) (`rzIuwCIMlbw1qiGm`)
 **Instance:** `n8n.qivy.in`
 **Data table:** `Qivy Content Ledger` (`nt4YIGvd4r5gNydo`)
-**Status:** created and validated. **Not activated, no GitHub credential, never executed.**
+**Status:** created and validated. **Not activated. Never executed successfully.** Three blockers, all verified against the live instance — see [Before the first run](#before-the-first-run).
 
 ### Does this publish an article every day?
 
@@ -28,7 +28,7 @@ Read content ledger            (Data Table — every row)
    ↓
 Pick topic + duplicate check   (Code — Jaccard similarity)
    ↓
-Research and draft article     (AI Agent + OpenRouter — any model)
+Research and draft article     (AI Agent + OpenRouter — free model)
    ↓
 Generate thumbnail             (disabled by default)
    ↓
@@ -47,9 +47,19 @@ Notify admin                   (Gmail)
 
 ## Before the first run
 
-The workflow is created but **will not run correctly until these three things are done.** All three need credentials or decisions that only you can supply.
+The workflow is created but **will not run until these three things are done.** All three need a credential or a decision only you can supply. Each one was verified against the live instance on 2026-11-07, not assumed.
 
-### 1. Create a GitHub credential — *required*
+### 1. Fix the OpenRouter credential — *required*
+
+**Verified broken.** Both OpenRouter credentials on the instance — `OpenRouter Fshbet` and `OpenRouter soocuteofu` — return `401 User not found` when actually called. This was found by running a throwaway test workflow against each, not by inspection.
+
+1. Go to <https://openrouter.ai/keys> and create a key (or copy an existing working one).
+2. In n8n: **Credentials → `OpenRouter Fshbet` → API Key**, paste, **Save**.
+3. Press **Test** on the credential. It must come back green before going further — n8n's test only checks the key, so a green result here is the real signal.
+
+The key needs no credit for a `:free` model, but the account balance must not be *negative* — OpenRouter blocks free models on a negative balance.
+
+### 2. Create a GitHub credential — *required*
 
 No GitHub credential exists on the instance, so the four GitHub-facing nodes have an empty placeholder.
 
@@ -63,13 +73,15 @@ No GitHub credential exists on the instance, so the four GitHub-facing nodes hav
 
 The two HTTP Request nodes were skipped by n8n's credential auto-assignment and must be set by hand.
 
-### 2. Set the notification recipient — *required*
+### 3. Set the notification recipient — *required*
 
 `Notify admin` has `sendTo: CHANGE_ME@example.com`. Change it to the address that should receive review notifications. It was left as a placeholder deliberately rather than guessing an address.
 
-### 3. Activate the workflow
+### 4. Dry run, then activate
 
-It is saved **inactive**. Run it manually a few times first (see [Dry run](#dry-run)), then activate when you are happy with the output.
+It is saved **inactive**, and should stay that way until a manual run has produced a pull request you are happy with. See [Dry run](#dry-run).
+
+Order matters: fix the OpenRouter key first and run once — if the drafting step fails, you learn that without having created a GitHub token yet.
 
 ---
 
@@ -144,49 +156,74 @@ Before activating:
 
 The `Drafting model` sub-node is an **OpenRouter Chat Model**. That is the whole configuration surface: OpenRouter fronts OpenAI, Anthropic, Google, DeepSeek, Meta and others behind one key, so changing provider is **editing one field**, not editing the workflow.
 
-Current value: `openai/gpt-4.1` — the exact model the prompt was written against. Only the route to it changed.
+**Current value: `google/gemma-4-31b-it:free` — zero cost.**
 
-### Switching provider
+### Why a free model is the right default here
 
-Open **Drafting model** and change `model` to any id from <https://openrouter.ai/api/v1/models>.
+OpenRouter's own docs say free models "have low rate limits ... and are usually not suitable for production use". That warning is about volume. **This pipeline makes one model call per day.** One call a day sits far below the free daily cap on any account tier, so the usual reason to avoid free models does not apply.
+
+Two things to know about the free tier, both from OpenRouter's documentation:
+
+- The cap is a **number of requests per day**, shared across all free models. (The published figure depends on whether you have ever bought credits. Check yours at `GET https://openrouter.ai/api/v1/key` — the `free_model_daily_requests` field.)
+- **A negative credit balance blocks free models too.** If free calls start failing with a 402, top the balance back above zero.
+
+### Free options
+
+| Model id | Notes |
+|---|---|
+| `google/gemma-4-31b-it:free` **(current)** | Known Google instruct family; supports a JSON response format, which this pipeline's strict output contract benefits from. |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | Far larger model, 1M context. Does **not** advertise `response_format` support, so JSON adherence rests on the prompt alone. |
+| `google/gemma-4-26b-a4b-it:free` | Smaller sibling of the current pick. |
+| `openrouter/free` | OpenRouter's Free Models Router — auto-selects a free model per request. Convenient, but the least predictable, which is a poor match for a strict output contract. |
+
+Full list: <https://openrouter.ai/models?max_price=0>
+
+### Paid options, if free output is not good enough
 
 | Model id | In / Out per 1M tokens | Notes |
 |---|---|---|
-| `openai/gpt-4.1` | $2.00 / $8.00 | Current. What the prompt was tuned against. |
-| `anthropic/claude-sonnet-4.5` | $3.00 / $15.00 | Strongest at long-form prose and following the structure rules. |
-| `google/gemini-2.5-flash` | $0.30 / $2.50 | Cheapest credible option for this job. |
+| `google/gemini-2.5-flash` | $0.30 / $2.50 | Cheapest credible paid option. |
 | `deepseek/deepseek-chat` | $0.32 / $0.89 | Cheapest overall. |
-| `openai/gpt-4.1-mini` | $0.40 / $1.60 | Same family, lower cost. |
+| `openai/gpt-4.1` | $2.00 / $8.00 | What the system prompt was originally written against. |
+| `anthropic/claude-sonnet-4.5` | $3.00 / $15.00 | Strongest at long-form prose and structure rules. |
 
-Model ids and prices were read from the OpenRouter API on **2026-11-07** and are accurate as of that date. Prices change; re-check before budgeting on them. Model availability also changes — if an id is rejected, look it up in the list above rather than guessing at a name.
+At one 300–700 word article per day, even the dearest option here is cents per article. The reason to stay free is that it costs nothing, not that paid is expensive.
 
-**Not verified:** no article has been drafted through any of these models yet. The pipeline has never run end to end, because it has no GitHub credential. Output quality per model is therefore an expectation, not a measurement.
+**Model ids and prices were read from the OpenRouter API on 2026-11-07** and were correct then. Both change. If an id is rejected, look it up in the live list rather than guessing a name.
+
+### Not verified
+
+**No article has been drafted through any of these models.** Both OpenRouter credentials on this instance return `401 User not found`, so the drafting step has never executed — see [Before the first run](#before-the-first-run). Everything above about model *quality* is reasoning from published specifications, not measurement.
+
+What *is* certain is the failure mode. If a weak model cannot hold the JSON contract, `Validate draft + build Markdown` throws and the run stops. No branch, no pull request, no article. **A weak model produces nothing; it cannot produce a bad article.** That is why trying a free model costs you a failed run at worst.
+
+If runs fail on JSON parsing, the first thing to try is **Options → Response Format → JSON** on the `Drafting model` node, before changing model.
 
 ### Using a provider directly instead of OpenRouter
 
-OpenRouter adds a routing hop. To go direct, delete the `Drafting model` sub-node and drag in the matching chat model node. Credentials that already exist on this instance:
+To skip the routing hop, delete the `Drafting model` sub-node and drag in the matching chat model node. Credentials already on this instance:
 
-| Want | Node to use | Credential already present |
+| Want | Node | Credential present |
 |---|---|---|
 | OpenAI direct | OpenAI Chat Model | `OpenAI account` |
 | Groq | Groq Chat Model | `Groq account` |
 | Local, free | Ollama Chat Model | `Ollama account` |
 
-Anthropic and Google have no credential on this instance yet; add one first if you want those direct rather than through OpenRouter.
+Anthropic and Google have no credential here yet.
 
-Nothing else in the workflow changes — the agent, the validator, the GitHub steps and the ledger are all provider-agnostic.
+Nothing else in the workflow changes — the agent, validator, GitHub steps and ledger are all provider-agnostic.
 
 ### Running locally on Ollama
 
-To draft at no API cost, use the **Ollama Chat Model** with the existing `Ollama account` credential.
+Use the **Ollama Chat Model** with the existing `Ollama account` credential. Free, and nothing leaves your machine.
 
-Honest expectation: a small local model is fine for ideation, slugs and metadata, but weaker at the tightly-structured, well-sourced prose the editorial rules demand — and the validator is strict, so a weak model will fail the run rather than publish something poor. The practical split is cloud for drafting, local for the mechanical steps.
+Honest expectation: a small local model is fine for ideation, slugs and metadata, but weaker at the tightly-structured, well-sourced prose the editorial rules demand. Same failure mode as above — it fails the run rather than publishing something poor.
 
 ---
 
 ## Costs
 
-- **Drafting** — one call per day through OpenRouter. A 300–700 word article with this system prompt is a small request; at `openai/gpt-4.1` prices that is cents per article, not dollars. Exact cost is not measured, because no run has happened yet.
+- **Drafting** — **₹0 / $0.** One call per day on a `:free` OpenRouter model. Switching to a paid model would be cents per article, not dollars.
 - **Thumbnail generation** — the `Generate thumbnail (disabled)` node is **off**. Every run would otherwise be a paid image call, and the site already renders a category-tinted placeholder for articles without an image. It still uses the OpenAI credential directly, not OpenRouter. Enable it only if you want generated thumbnails.
 - **GitHub Actions** — free on public repositories.
 - **n8n** — your existing self-hosted instance.

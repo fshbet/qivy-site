@@ -208,7 +208,11 @@ An article page is roughly **1/10th** the old payload, and a reader downloads on
 ### 7.1 Needs your decision
 
 1. ~~Pages source must be switched to GitHub Actions.~~ **Done by you, verified** — the Pages API reports `"build_type": "workflow"`. The site is live.
-2. **The GitHub credential for the pipeline.** No GitHub credential exists in n8n; the four GitHub-facing nodes have an empty placeholder. The workflow cannot run until you add a token with `repo` scope.
+2. **Two broken credentials block the pipeline.**
+   - **OpenRouter** — both keys on the instance return `401 User not found`, confirmed by running a test workflow against each. Paste a working key into `OpenRouter Fshbet`.
+   - **GitHub** — no credential exists; the four GitHub-facing nodes have an empty placeholder. Needs a token with `repo` scope.
+
+   The drafting model is now `google/gemma-4-31b-it:free`, so running the pipeline costs nothing — one call a day is far below OpenRouter's free daily cap. See [n8n/README.md](./n8n/README.md#choosing-the-model).
 3. **The notification recipient** in `Notify admin` is `CHANGE_ME@example.com`. Left as a placeholder rather than guessing — publishing your personal address was not mine to decide.
 4. **Contact details.** About, Privacy and Terms point at `github.com/fshbet`. If you want an email published, say which.
 5. ~~`/Tools/*.zip` are no longer served.~~ **Decided 2026-11-07: leave them off.** The files stay in the repository; they are simply not published. Republishing them under `/downloads/` remains a two-file copy if that ever changes.

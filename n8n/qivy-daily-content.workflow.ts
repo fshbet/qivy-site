@@ -158,17 +158,25 @@ const pickTopic = node({
 // ── Draft ─────────────────────────────────────────────────────────────────
 // The drafting model goes through OpenRouter, which turns "use a different
 // provider" into editing one string rather than editing the workflow.
-// 'openai/gpt-4.1' is the exact model this pipeline was built and prompted
-// against — only the route to it changed.
+//
+// FREE BY DEFAULT. Ids ending ':free' cost nothing. OpenRouter caps free
+// models at a low number of requests per day and says they are "usually not
+// suitable for production use" — but this pipeline makes ONE call per day,
+// so that cap is never in play. Free is a genuine fit here, not a compromise.
 //
 // CHANGING PROVIDER: edit MODEL to any id from
-// https://openrouter.ai/api/v1/models. 'anthropic/claude-sonnet-4.5',
-// 'google/gemini-2.5-flash' and 'deepseek/deepseek-chat' all work with
-// nothing else touched. Verified ids and current prices: n8n/README.md.
+// https://openrouter.ai/api/v1/models (free ones: ?max_price=0).
+// Alternatives, free and paid, are tabulated in n8n/README.md.
 //
-// RUNNING IT FREE AND LOCAL: replace this one sub-node with an Ollama Chat
-// Model. Nothing else in the workflow changes. See n8n/README.md.
-const MODEL = 'openai/gpt-4.1';
+// NOT VERIFIED: no article has been drafted through this model. Both
+// OpenRouter credentials on the instance return 401, so the drafting step
+// has never executed. If the model cannot hold the JSON contract, the
+// validator throws and no pull request opens — a weak model produces
+// nothing, never a bad article.
+//
+// RUNNING IT LOCAL: replace this one sub-node with an Ollama Chat Model.
+// Nothing else in the workflow changes.
+const MODEL = 'google/gemma-4-31b-it:free';
 
 const draftModel = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatOpenRouter',
@@ -579,14 +587,17 @@ const noteSetup = sticky(
   [
     '## Before the first run',
     '',
-    '1. Create a **GitHub** credential (personal access token with',
+    '1. **Fix the OpenRouter credential.** Both keys on this instance',
+    '   return `401 User not found`. Paste a working key into',
+    '   `OpenRouter Fshbet`, or the drafting step cannot run.',
+    '2. Create a **GitHub** credential (personal access token with',
     '   `repo` scope) and select it on all four GitHub nodes — including',
     '   the two HTTP Request ones, which credential auto-assignment skips.',
-    '2. Set the recipient on **Notify admin** — it is a placeholder.',
-    '3. Add topic rows to the **Qivy Content Ledger** data table with',
+    '3. Set the recipient on **Notify admin** — it is a placeholder.',
+    '4. Add topic rows to the **Qivy Content Ledger** data table with',
     '   `status = idea`, `topic`, and `category`',
     '   (`ai` / `automation` / `tips`).',
-    '4. Seed the ledger with existing article slugs so they are never',
+    '5. Seed the ledger with existing article slugs so they are never',
     '   re-proposed (see n8n/README.md).',
     '',
     'This workflow is **inactive**. Nothing runs until you activate it.',
@@ -605,22 +616,39 @@ const noteModel = sticky(
     '**Drafting model** is an **OpenRouter** node, so the provider is',
     'one field, not a workflow change.',
     '',
-    'Edit its `model` to switch. Verified working ids:',
+    '### Free (current setting)',
     '',
-    '| Model | In / Out per 1M tokens |',
+    "Ids ending `:free` cost nothing. This pipeline makes **one call",
+    "per day**, far below OpenRouter's free daily cap, so free is a",
+    'real fit here — not a compromise.',
+    '',
+    '| Free model id | Why |',
     '|---|---|',
-    '| `openai/gpt-4.1` *(current)* | $2.00 / $8.00 |',
-    '| `anthropic/claude-sonnet-4.5` | $3.00 / $15.00 |',
+    '| `google/gemma-4-31b-it:free` **(current)** | Known instruct family, supports JSON response format |',
+    '| `nvidia/nemotron-3-ultra-550b-a55b:free` | Much larger; no JSON response-format support |',
+    '| `openrouter/free` | Auto-picks a free model; least predictable |',
+    '',
+    '### Paid, if free output is not good enough',
+    '',
+    '| Model id | In / Out per 1M |',
+    '|---|---|',
     '| `google/gemini-2.5-flash` | $0.30 / $2.50 |',
     '| `deepseek/deepseek-chat` | $0.32 / $0.89 |',
-    '| `openai/gpt-4.1-mini` | $0.40 / $1.60 |',
+    '| `openai/gpt-4.1` | $2.00 / $8.00 |',
+    '| `anthropic/claude-sonnet-4.5` | $3.00 / $15.00 |',
     '',
-    'Prices read from the OpenRouter API on 2026-11-07 — re-check',
-    'before relying on them.',
+    'Ids and prices read from the OpenRouter API on 2026-11-07.',
     '',
-    '**Free and local:** delete this sub-node and drag in an',
-    '**Ollama Chat Model** (the credential already exists). Nothing',
-    'else in the workflow changes.',
+    '### If the run fails on JSON parsing',
+    '',
+    'Set **Options → Response Format → JSON** on this node. A weaker',
+    'model needs the nudge.',
+    '',
+    '**A weak model cannot publish a bad article.** The validator',
+    'throws, the run fails, no PR opens.',
+    '',
+    '**Free and local:** swap this sub-node for an **Ollama Chat',
+    'Model** (credential exists).',
   ].join('\n'),
   [draftModel],
   { color: 5 },
