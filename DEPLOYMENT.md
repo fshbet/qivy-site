@@ -72,7 +72,7 @@ The previous commit is the rollback. Nothing is destructive.
 git revert --no-edit <merge-commit-sha> && git push
 ```
 
-**To return to the old single-file site entirely**, also set Pages back to *Deploy from a branch → `main` → `/`*. The legacy `index.html` is still in the repository at the root and is untouched by this work, so the old site returns exactly as it was.
+**To return to the old single-file site entirely**, also set Pages back to *Deploy from a branch → `main` → `/`*. The legacy `index.html` is still in the repository at the root and renders exactly as it did. One line has changed since this was written: its icon library was loaded from `unpkg.com/lucide@latest`, which executed whatever was newest with full page privileges, and is now pinned to `1.70.0` with a `sha384` integrity hash. Checked both ways — with the correct hash the page renders its 59 icons and logs no errors; with a wrong one the browser blocks the script and the page still renders, minus icons.
 
 ---
 

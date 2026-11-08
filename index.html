@@ -7,7 +7,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Pinned with a hash. `lucide@latest` ran whatever was newest at page load,
+     with full page privileges and no way to tell if it had changed. 1.70.0 is
+     what @latest served on 2026-11-08, byte-identical to the pinned URL. A
+     swapped or tampered file now fails the integrity check and simply does not
+     execute — the createIcons() calls below are already guarded by
+     `typeof lucide`, so the page degrades to no icons rather than breaking.
+     To update: choose a version, fetch it, recompute the sha384. -->
+<script src="https://unpkg.com/lucide@1.70.0/dist/umd/lucide.min.js"
+        integrity="sha384-64z4N640tVzhAicQVGzxE/48VNN9yS53U5kv9UH8ca7xGU4KSJ9zz8nD4C2BEerP"
+        crossorigin="anonymous"></script>
 <style>
 /* ── Reset & Tokens ──────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
