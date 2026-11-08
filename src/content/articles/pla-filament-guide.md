@@ -6,8 +6,9 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'PLA Filament — The Complete Guide'
 metaDescription: 'PLA filament reference: properties, print temperatures, bed adhesion, when it fails, and how it compares to other materials.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://help.prusa3d.com/article/pla_2062'
 tags:
   - pla
   - filament

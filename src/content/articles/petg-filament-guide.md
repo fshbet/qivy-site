@@ -6,8 +6,9 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'PETG Filament Guide for Functional Parts'
 metaDescription: 'PETG filament reference: why glycol modification matters, print settings, stringing fixes, chemical resistance and PLA comparison.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://help.prusa3d.com/article/petg_2059'
 tags:
   - petg
   - filament

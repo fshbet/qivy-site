@@ -6,8 +6,10 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'ABS & ASA Filament — Engineering Guide'
 metaDescription: 'ABS and ASA filament reference: enclosure requirements, warping control, acetone smoothing, UV stability and print settings.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://help.prusa3d.com/article/abs_2058'
+  - 'https://help.prusa3d.com/article/asa_1809'
 tags:
   - abs
   - asa

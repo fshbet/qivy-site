@@ -6,8 +6,9 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'TPU & Flexible Filaments — Complete Guide'
 metaDescription: 'TPU and flexible filament reference: Shore hardness ratings, direct drive vs bowden, print speeds and retraction settings.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://help.prusa3d.com/article/flexible-materials_2057'
 tags:
   - tpu
   - flexible

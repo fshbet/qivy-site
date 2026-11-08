@@ -6,8 +6,10 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'Filament Storage & Drying Guide'
 metaDescription: 'Filament storage and drying: moisture damage signs, silica gel, drying temperatures per material, dry boxes and monsoon prep.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://help.prusa3d.com/article/drying-filament_332086'
+  - 'https://help.prusa3d.com/article/polyamide-nylon_167188'
 tags:
   - storage
   - drying

@@ -6,8 +6,9 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'Nylon & PA Filament — Strength Guide'
 metaDescription: 'Nylon and PA filament reference: moisture handling, all-metal hotend requirements, drying, and carbon-fibre reinforced variants.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://help.prusa3d.com/article/polyamide-nylon_167188'
 tags:
   - nylon
   - pa12

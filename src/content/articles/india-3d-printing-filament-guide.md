@@ -6,8 +6,10 @@ subcategory: filaments
 publishDate: 2026-05-01
 seoTitle: 'India 3D Printing Filament Guide'
 metaDescription: 'Buying filament in India: imports and GST, local vendors, Amazon India, monsoon storage and a practical budget guide.'
-verification: tested
-sources: []
+verification: researched
+sources:
+  - 'https://cbic-gst.gov.in/gst-goods-services-rates.html'
+  - 'https://help.prusa3d.com/article/drying-filament_332086'
 tags:
   - india
   - filament
@@ -38,7 +40,7 @@ As of mid-2026, India has no large-scale domestic filament manufacturer producin
 
 Amazon India resellers who import in bulk absorb the customs processing overhead, offering slightly better effective pricing and eliminating the risk of customs holds. For single-spool direct imports, the paperwork risk rarely justifies the marginal saving.
 
-> **Practical implication:** The eSUN-to-Prusament quality gap narrows significantly when you factor India import costs. eSUN PLA+ at ₹700/kg vs Prusament PLA at ₹3,500/kg (after import) is a 5× price difference for roughly 15–20% measurable quality improvement. For engineering-grade materials (PA-CF, PC Blend) where consistency truly matters, the premium is justified.
+> **Practical implication:** The eSUN-to-Prusament quality gap narrows significantly when you factor India import costs. eSUN PLA+ at ₹700/kg vs Prusament PLA at ₹3,500/kg (after import) is a 5× price difference for a quality difference most makers would put in the 15–20% range — a judgement, not a measurement. For engineering-grade materials (PA-CF, PC Blend) where consistency truly matters, the premium is justified.
 
 ## Budget guide by material — India pricing
 
