@@ -53,6 +53,24 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # "No access to the specified resource" does not say WHICH access is
+      # missing. This turns that into an answer: is the token valid, which
+      # account can it reach, and can it read Workers there at all. A token
+      # scoped to the wrong account and a token missing Edit look identical
+      # in the deploy error but different here.
+      - name: What can this token actually do?
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCT: REDACTED
+        run: |
+          api() { curl -s -H "Authorization: Bearer $TOKEN"             "https://api.cloudflare.com/client/v4$1"; }
+          echo "token valid : $(api /user/tokens/verify | jq -r '.result.status // .errors[0].message')"
+          echo "accounts visible to it:"
+          api /accounts | jq -r '.result[]? | "  \(.id)  \(.name)"' || true
+          echo "reads Workers in $ACCT : $(api "/accounts/$ACCT/workers/scripts" | jq -r 'if .success then "yes" else .errors[0].message end')"
+          echo "reads D1 in $ACCT      : $(api "/accounts/$ACCT/d1/database" | jq -r 'if .success then "yes" else .errors[0].message end')"
+
       - name: Deploy
         if: steps.gate.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v3
