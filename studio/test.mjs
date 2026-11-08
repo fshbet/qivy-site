@@ -294,6 +294,19 @@ await atest('a redirect is reported as a better URL, not a fault', async () => {
   assert.match(r.warnings[0], /new\.test/);
 });
 
+// Draft 2 verbatim, and the reason the style rules can be followed at all:
+// Response.url drops the fragment, so an anchored citation that never moved
+// used to be reported as a redirect to itself.
+await atest('an anchor is not mistaken for a redirect', async () => {
+  const url = 'https://aistudio.google.com/docs/text-generation#system-instructions';
+  const r = await checkSources(
+    [url],
+    fakeFetch({ [url]: { status: 200, url: 'https://aistudio.google.com/docs/text-generation' } }),
+  );
+  assert.deepEqual(r.moved, [], 'an anchored URL that did not move must not be reported as moved');
+  assert.deepEqual(r.warnings, []);
+});
+
 await atest('HEAD refused falls back to GET before calling it dead', async () => {
   let calls = 0;
   const impl = async (url, opts) => {

@@ -459,7 +459,10 @@ export async function checkSources(sources, impl = fetch) {
         }
         if (res.status >= 400) {
           dead.push(`${url} (HTTP ${res.status})`);
-        } else if (res.url && res.url !== url) {
+        } else if (res.url && res.url !== url.split('#')[0]) {
+          // Compared without the fragment: Response.url never carries one, so
+          // every anchored citation would otherwise look like a redirect to
+          // its own page -- and the style rules ask for anchors.
           moved.push(`${url} -> ${res.url}`);
         }
       } catch (err) {
