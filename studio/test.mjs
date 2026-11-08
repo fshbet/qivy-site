@@ -11,7 +11,14 @@
  */
 
 import assert from 'node:assert/strict';
-import { pickTopic, similarity, validateDraft, buildMarkdown } from './src/pipeline.js';
+import {
+  pickTopic,
+  similarity,
+  validateDraft,
+  buildMarkdown,
+  modelChain,
+  FALLBACK_MODELS,
+} from './src/pipeline.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -152,6 +159,24 @@ test('flags first-person claims instead of silently publishing them', () => {
 test('flags a near-duplicate topic for the reviewer', () => {
   const d = validateDraft(JSON.stringify(good), { category: 'ai', topicSimilarity: 0.4 });
   assert.ok(d.warnings.some((w) => /similarity/i.test(w)));
+});
+
+console.log('\nFallback chain');
+
+test('primary goes first', () => {
+  assert.equal(modelChain('google/gemma-4-31b-it:free')[0], 'google/gemma-4-31b-it:free');
+});
+
+test('a primary that is also a fallback is not tried twice', () => {
+  const c = modelChain(FALLBACK_MODELS[0]);
+  assert.equal(new Set(c).size, c.length, `repeat in ${c.join(', ')}`);
+  assert.equal(c[0], FALLBACK_MODELS[0]);
+});
+
+test('no fallback shares the primary vendor, or it shares the rate limit', () => {
+  const vendor = (m) => m.split('/')[0];
+  const clash = FALLBACK_MODELS.filter((m) => vendor(m) === vendor('google/gemma-4-31b-it:free'));
+  assert.deepEqual(clash, [], `same pool as the primary: ${clash.join(', ')}`);
 });
 
 console.log('\nMarkdown');

@@ -119,6 +119,13 @@ Open <https://write.qivy.in> → **Settings**.
 - **Model** — defaults to `google/gemma-4-31b-it:free`. Free. One call a day
   is far below OpenRouter's free daily cap. Any id from
   `openrouter.ai/api/v1/models` works; free ones end in `:free`.
+
+  Whatever you set is the *primary*. If it errors, OpenRouter falls through
+  `FALLBACK_MODELS` in `pipeline.js` — currently NVIDIA, then XingChen, then
+  OpenRouter's auto-router. They are deliberately on different upstream
+  providers: a `429` means the primary's shared free pool is busy, and
+  another model from the same vendor would queue behind the same wall. The
+  draft page records which model actually answered.
 - **GitHub token** — fine-grained PAT, **Contents: read and write** on
   `fshbet/qivy-site` only. Used solely when you press Publish.
 

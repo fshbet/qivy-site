@@ -54,6 +54,36 @@ export const DEFAULT_MODEL = 'google/gemma-4-31b-it:free';
 // well past any normal free-tier queue and well inside a Worker's life.
 const MODEL_TIMEOUT_MS = 60_000;
 
+// Tried in order when one errors — OpenRouter does the failing over itself,
+// so there is no retry loop here. Every entry is zero-priced and supports
+// response_format, checked against /api/v1/models on 2026-11-08.
+//
+// The point is the VENDOR column, not the count. A 429 on gemma means
+// Google AI Studio's shared free pool is busy, so another Google model is
+// no use at all — it queues behind the same wall. Each fallback below is a
+// different upstream.
+//
+//   nvidia/nemotron-3.5-super-vl   NVIDIA        1M ctx
+//   xingchen-agi/xing4.0-29b-a4b   XingChen    262k ctx, text only
+//   openrouter/free                auto-router, last resort
+//
+// Deliberately excluded: google/gemma-4-26b-a4b-it:free (same pool as the
+// primary), the Lyria models (music, not text), and stealth/crouton-alpha
+// (a cloaked model — prompts there feed someone's evaluation, which is not
+// a thing to opt into silently).
+export const FALLBACK_MODELS = [
+  'nvidia/nemotron-3.5-super-vl:free',
+  'xingchen-agi/xing4.0-29b-a4b:free',
+  'openrouter/free',
+];
+
+// Primary first, no repeats. A duplicate would spend a fallback slot on a
+// model that just failed.
+export function modelChain(primary) {
+  const first = primary || DEFAULT_MODEL;
+  return [first, ...FALLBACK_MODELS.filter((m) => m !== first)];
+}
+
 // ─── Duplicate detection ────────────────────────────────────────────────
 // Jaccard similarity on words of 4+ characters. Catches "Write better Claude
 // prompts" against "How to improve your Claude prompting", which exact-title
@@ -155,7 +185,13 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
         'X-Title': 'Qivy Studio',
       },
       body: JSON.stringify({
-        model: model || DEFAULT_MODEL,
+        // `models` (plural) is OpenRouter's own fallback routing: it walks the
+      // list on error and bills only the one that answers.
+      models: modelChain(model),
+      // The validator rejects anything that is not JSON, and a weaker
+      // fallback is far likelier to wrap it in chat. Every model in the
+      // chain supports this, so ask for the contract instead of hoping.
+      response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
@@ -184,7 +220,16 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
     // Surface the provider's own words — "401 User not found" and
     // "402 negative balance" need different fixes and a generic message
     // hides which one you have.
-    throw new Error(`OpenRouter returned HTTP ${res.status}: ${text.slice(0, 400)}`);
+    const chain = modelChain(model).join(', ');
+    const exhausted =
+      res.status === 429
+        ? ` Every model in the chain was rate-limited (${chain}). ` +
+          'This is free-tier contention, not a broken key. The 06:00 run ' +
+          'will try again, or set a paid model in Settings.'
+        : '';
+    throw new Error(
+      `OpenRouter returned HTTP ${res.status}: ${text.slice(0, 400)}${exhausted}`,
+    );
   }
 
   let body;
