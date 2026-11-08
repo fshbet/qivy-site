@@ -96,6 +96,19 @@ Prefer a different hostname? Change `pattern` in `wrangler.toml`.
 
 7. Commit and push. The redeploy picks them up.
 
+### Credential expiry
+
+| Credential | Set | Expires |
+|---|---|---|
+| GitHub PAT `qivy-studio-publish` | 2026-11-08 | **2027-02-06** (90 days, GitHub's cap for this repo) |
+| Cloudflare `CLOUDFLARE_API_TOKEN` | 2026-11-07 | never |
+| OpenRouter key | 2026-11-08 | never |
+
+When the PAT expires, **Publish** starts returning a GitHub `401` and nothing
+else changes — drafting keeps working, so the queue fills while nothing ships.
+Regenerate it and paste the new value into Settings. Nothing else records this
+date.
+
 ### 4. Keys, in the page
 
 Open <https://write.qivy.in> → **Settings**.
