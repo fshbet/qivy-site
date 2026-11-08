@@ -24,6 +24,7 @@ import {
   dangerousHtml,
 } from './src/pipeline.js';
 import { isSameOrigin } from './src/index.js';
+import { requireAccess } from './src/access.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -423,6 +424,130 @@ test('an unparseable Origin is refused', () => {
 
 test('Referer is accepted as the fallback it is', () => {
   assert.equal(isSameOrigin(req({ Referer: 'https://write.qivy.in/draft/1' }), here), true);
+});
+
+console.log('\nThe Access gate');
+
+// The authentication boundary had no automated coverage at all: the README
+// said so, and "it is only reachable through Cloudflare" is a reason to test
+// it more carefully, not less. These build a real RS256 token with WebCrypto
+// and serve a real JWKS from a stubbed fetch, so the whole path runs —
+// signature, exp, aud, iss — not a mock of it.
+
+const b64u = (bytes) =>
+  btoa(String.fromCharCode(...new Uint8Array(bytes)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+const TEAM = 'patient-silence-2588.cloudflareaccess.com';
+const AUD = 'aud-for-this-app';
+const envOk = { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD };
+
+const pair = await crypto.subtle.generateKey(
+  { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+  true,
+  ['sign', 'verify'],
+);
+const pubJwk = { ...(await crypto.subtle.exportKey('jwk', pair.publicKey)), kid: 'key-1' };
+
+async function token(claims = {}, { kid = 'key-1', breakSignature = false, rawSignature = null } = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  const head = b64u(new TextEncoder().encode(JSON.stringify({ alg: 'RS256', kid })));
+  const body = b64u(
+    new TextEncoder().encode(
+      JSON.stringify({ aud: [AUD], iss: `https://${TEAM}`, exp: now + 600, email: 'reviewer@example.com', ...claims }),
+    ),
+  );
+  if (rawSignature !== null) return `${head}.${body}.${rawSignature}`;
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(`${head}.${body}`));
+  const encoded = b64u(sig);
+  return `${head}.${body}.${breakSignature ? `A${encoded.slice(1)}` : encoded}`;
+}
+
+const asRequest = (t) =>
+  new Request('https://write.qivy.in/', t ? { headers: { 'Cf-Access-Jwt-Assertion': t } } : {});
+
+let served = { keys: [pubJwk] };
+let fetches = 0;
+globalThis.fetch = async (url) => {
+  fetches += 1;
+  if (!String(url).includes('/cdn-cgi/access/certs')) throw new Error(`unexpected fetch: ${url}`);
+  return { ok: true, json: async () => served };
+};
+
+// Ordered deliberately: the key cache lives in module scope, so the cases
+// that depend on an EMPTY cache have to run before anything fills it.
+await atest('an unconfigured gate refuses everything', async () => {
+  const r = await requireAccess(asRequest(await token()), { ACCESS_TEAM_DOMAIN: '', ACCESS_AUD: '' });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 503);
+});
+
+await atest('an empty key set is a failure, not something to cache for an hour', async () => {
+  served = { keys: [] };
+  const first = await requireAccess(asRequest(await token()), envOk);
+  assert.equal(first.status, 503);
+  // If the empty answer had been cached, the next request would be refused
+  // without asking again. It must ask again.
+  const before = fetches;
+  served = { keys: [pubJwk] };
+  const second = await requireAccess(asRequest(await token()), envOk);
+  assert.ok(fetches > before, 'expected a second key fetch rather than a cached empty set');
+  assert.equal(second.ok, true);
+});
+
+await atest('a valid token is let through, with its identity', async () => {
+  const r = await requireAccess(asRequest(await token()), envOk);
+  assert.equal(r.ok, true);
+  assert.equal(r.email, 'reviewer@example.com');
+});
+
+await atest('no token at all is refused', async () => {
+  const r = await requireAccess(asRequest(null), envOk);
+  assert.equal(r.status, 401);
+});
+
+await atest('an expired token is refused', async () => {
+  const r = await requireAccess(asRequest(await token({ exp: Math.floor(Date.now() / 1000) - 10 })), envOk);
+  assert.equal(r.status, 401);
+  assert.match(r.message, /expired/i);
+});
+
+await atest('a token for another Access app is refused', async () => {
+  const r = await requireAccess(asRequest(await token({ aud: ['some-other-app'] })), envOk);
+  assert.equal(r.status, 403);
+});
+
+await atest('a token from another team is refused', async () => {
+  const r = await requireAccess(asRequest(await token({ iss: 'https://someone-else.cloudflareaccess.com' })), envOk);
+  assert.equal(r.status, 403);
+});
+
+await atest('a tampered signature is refused', async () => {
+  const r = await requireAccess(asRequest(await token({}, { breakSignature: true })), envOk);
+  assert.equal(r.status, 401);
+});
+
+await atest('an unsigned "alg: none" style token cannot slip past', async () => {
+  // The verifier never reads header.alg — it always checks RS256 against the
+  // published RSA key — so a token with an empty signature simply fails.
+  const r = await requireAccess(asRequest(await token({}, { rawSignature: '' })), envOk);
+  assert.equal(r.ok, false);
+});
+
+await atest('a malformed signature is refused, not thrown out of the handler', async () => {
+  // b64urlToBytes throws on this. Before, that escaped requireAccess and
+  // left the request unhandled; an unauthenticated caller could do it.
+  const r = await requireAccess(asRequest(await token({}, { rawSignature: '!!!not base64!!!' })), envOk);
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 401);
+});
+
+await atest('a token signed by an unknown key is refused', async () => {
+  const r = await requireAccess(asRequest(await token({}, { kid: 'key-does-not-exist' })), envOk);
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 401);
 });
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' — with failures above' : ''}.\n`);

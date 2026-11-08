@@ -240,15 +240,19 @@ Everything here is on a free tier at this volume.
 node studio/test.mjs
 ```
 
-51 checks over duplicate detection, the validator, Markdown generation, the
-model fallback chain, source checking, the HTML that Publish refuses, and the
-cross-site origin rule. No framework.
+62 checks over duplicate detection, the validator, Markdown generation, the
+model fallback chain, source checking, the HTML that Publish refuses, the
+cross-site origin rule, and the Access gate. No framework.
 
-What they do **not** cover: the Access JWT verified against real Cloudflare
-keys, the D1 and KV bindings, the OpenRouter call and the GitHub commit.
-Those need a live environment. All four have since run for real and one
-article is published — but that was observed, not asserted, and no automated
-test exercises them.
+The Access tests generate a real RS256 key with WebCrypto and serve a real
+JWKS from a stubbed fetch, so the whole verification path runs — signature,
+`exp`, `aud`, `iss`, unknown key, malformed token. What they cannot prove is
+that *Cloudflare's* tokens look the way these do; that is an assumption about
+the issuer, held against its published format.
+
+What nothing here covers: the D1 and KV bindings, the OpenRouter call and the
+GitHub commit. Those need a live environment. All three have run for real and
+two articles are published — but that was observed, not asserted.
 
 To re-check the schema contract after changing `buildMarkdown()`:
 
