@@ -19,6 +19,7 @@ import {
   modelChain,
   FALLBACK_MODELS,
   MAX_CHAIN,
+  unfencedTags,
 } from './src/pipeline.js';
 
 let passed = 0;
@@ -191,6 +192,37 @@ test('no fallback is silently dropped by the cap', () => {
   assert.ok(
     FALLBACK_MODELS.length <= MAX_CHAIN - 1,
     `${FALLBACK_MODELS.length} fallbacks but only ${MAX_CHAIN - 1} can ever be tried`,
+  );
+});
+
+console.log('\nUnfenced HTML tags');
+
+test('catches a bare tag that markdown would eat', () => {
+  // This is draft 1 verbatim. It would have published with the tags invisible.
+  const body = '<instructions>\nSummarise the text below.\n</instructions>\n\n<text>\nPaste here.\n</text>';
+  assert.deepEqual(unfencedTags(body).sort(), ['instructions', 'text']);
+});
+
+test('a fenced block is fine, that is the fix', () => {
+  assert.deepEqual(unfencedTags('```\n<instructions>\nx\n</instructions>\n```'), []);
+});
+
+test('inline code is fine too', () => {
+  assert.deepEqual(unfencedTags('Wrap it in `<instructions>` like so.'), []);
+});
+
+test('comparison operators are not tags', () => {
+  assert.deepEqual(unfencedTags('5 < 7 and 9 > 2, so x <= y.'), []);
+});
+
+test('the warning reaches the reviewer rather than throwing', () => {
+  const d = validateDraft(
+    JSON.stringify({ ...good, body: good.body + '\n\n<instructions>\ndo it\n</instructions>' }),
+    opts,
+  );
+  assert.ok(
+    d.warnings.some((w) => /unfenced tags/i.test(w)),
+    `expected an unfenced-tag warning, got: ${d.warnings.join(' | ')}`,
   );
 });
 

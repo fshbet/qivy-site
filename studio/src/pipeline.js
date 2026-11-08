@@ -256,6 +256,24 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
   return { content, usedModel: body.model || model };
 }
 
+// Astro passes raw HTML straight through Markdown, so a bare <instructions>
+// in prose becomes a real unknown element: the browser shows the text inside
+// and silently swallows the tags themselves. An article teaching XML-tag
+// prompting then publishes with its examples gutted — and it looks correct
+// in the draft box, because that is a textarea showing the source.
+// Fenced and inline code are escaped properly, so only unfenced tags matter.
+export function unfencedTags(body) {
+  const bare = body
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/~~~[\s\S]*?~~~/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ');
+  const found = new Set();
+  for (const [, tag] of bare.matchAll(/<\/?([a-zA-Z][a-zA-Z0-9-]*)\s*\/?>/g)) {
+    found.add(tag.toLowerCase());
+  }
+  return [...found];
+}
+
 // ─── Validation ─────────────────────────────────────────────────────────
 
 const FIRST_PERSON =
@@ -344,6 +362,15 @@ export function validateDraft(raw, { category, topicSimilarity }) {
   if (topicSimilarity >= 0.35) {
     warnings.push(
       `Topic similarity ${topicSimilarity} against an existing article. Check this is genuinely new ground.`,
+    );
+  }
+  const bareTags = unfencedTags(body);
+  if (bareTags.length) {
+    warnings.push(
+      `Unfenced tags in the body (${bareTags.map((t) => `<${t}>`).join(', ')}). ` +
+        'Markdown passes these through as real HTML, so on the page the tags ' +
+        'vanish and only the text between them shows. Wrap the block in a ' +
+        'triple-backtick fence before publishing.',
     );
   }
   const words = body.trim().split(/\s+/).length;
