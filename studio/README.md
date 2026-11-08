@@ -31,7 +31,7 @@ There is no email. The queue page is the notification.
 |---|---|
 | D1 database `qivy-studio` | created — `b6a92c24-9238-4fd1-b778-9e3cbbc02aac` |
 | KV namespace `qivy-studio-settings` | created — `e9af20372ba641b692492afc84d9046e` |
-| Schema (`topics`, `drafts`, `runs`) | created |
+| Schema (`topics`, `drafts`, `runs`) | created — recorded in [schema.sql](schema.sql) |
 | All 43 ledger rows migrated out of n8n | 25 `published`, 18 `idea` |
 | Worker source + deploy workflow | in this repo |
 | Logic tests | 18 passing — `node studio/test.mjs` |

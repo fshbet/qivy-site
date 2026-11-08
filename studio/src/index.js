@@ -78,8 +78,8 @@ async function generateDraft(env) {
   const inserted = await env.DB.prepare(
     `INSERT INTO drafts
        (topic_id, title, slug, category, summary, seo_title, meta_description,
-        tags, sources, body, warnings, model, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending')`,
+        tags, sources, body, warnings, model, status, words)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending',?)`,
   )
     .bind(
       picked.topic.id,
@@ -94,6 +94,11 @@ async function generateDraft(env) {
       draft.body,
       draft.warnings.join('\n'),
       usedModel || model,
+      // The validator's own count. Recomputing it in SQL got a different
+      // answer — separator arithmetic counts a blank line twice — and the
+      // reviewer judges length against the 150-900 rule, so the number on
+      // the page has to be the number the rule was applied to.
+      draft.words,
     )
     .run();
 
@@ -123,7 +128,7 @@ async function recordFailure(env, started, message) {
 async function queuePage(env, url) {
   const [{ results: drafts }, { results: counts }, { results: runs }] = await Promise.all([
     env.DB.prepare(
-      "SELECT id,title,category,summary,warnings,model,created_at,words FROM (SELECT *, LENGTH(body)-LENGTH(REPLACE(body,' ',''))+1 AS words FROM drafts) WHERE status='pending' ORDER BY created_at DESC",
+      "SELECT id,title,category,summary,warnings,model,created_at,words FROM drafts WHERE status='pending' ORDER BY created_at DESC",
     ).all(),
     env.DB.prepare('SELECT status, COUNT(*) n FROM topics GROUP BY status').all(),
     env.DB.prepare('SELECT ok,message,started_at FROM runs ORDER BY id DESC LIMIT 1').all(),
@@ -386,6 +391,7 @@ export default {
         }
 
         if (method === 'POST' && action === '/publish') {
+          const startedPublish = new Date().toISOString();
           const form = await request.formData();
           const markdown = (form.get('markdown') || '').toString();
           const d = await env.DB.prepare('SELECT * FROM drafts WHERE id=?').bind(id).first();
@@ -431,6 +437,11 @@ export default {
               )}`,
             );
           } catch (err) {
+            // Everything else here leaves a row behind. A failed publish is
+            // the one worth the most later, since it is the step that
+            // touches the repository, and a redirect banner is gone the
+            // moment you navigate away.
+            await recordFailure(env, startedPublish, `Publish failed: ${err.message}`);
             return redirect(`/draft/${id}?err=${encodeURIComponent(err.message)}`);
           }
         }
