@@ -37,8 +37,9 @@ There is no email. The queue page is the notification.
 | Logic tests | 18 passing — `node studio/test.mjs` |
 | Generated Markdown vs the site's content schema | verified: a generated file builds (37 pages instead of 36) |
 
-**Not done, because it needs your credentials:** the deploy itself, Cloudflare
-Access, and the two API keys. That is the walkthrough below.
+Deployed on 2026-11-08, and Cloudflare Access is live on `write.qivy.in`
+(team `patient-silence-2588`). **Still to do:** the two API keys in Settings,
+step 4 below. Nothing can run until those exist.
 
 ---
 

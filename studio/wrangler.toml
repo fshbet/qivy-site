@@ -39,5 +39,5 @@ SITE_URL = "https://qivy.in"
 # ACCESS_TEAM_DOMAIN: "<your-team>.cloudflareaccess.com"
 # ACCESS_AUD:         the Application Audience tag from the Access app.
 # Set them here and redeploy, or in the dashboard under Settings → Variables.
-ACCESS_TEAM_DOMAIN = ""
-ACCESS_AUD = ""
+ACCESS_TEAM_DOMAIN = "patient-silence-2588.cloudflareaccess.com"
+ACCESS_AUD = "080c460e0c4462ef11d1c4328e859d85d8617350162b84a0675bf79a40fc862a"
