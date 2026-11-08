@@ -50,6 +50,10 @@ export const SYSTEM_PROMPT = [
 
 export const DEFAULT_MODEL = 'google/gemma-4-31b-it:free';
 
+// One call a day, so a slow answer is fine and a hung one is not. 60s is
+// well past any normal free-tier queue and well inside a Worker's life.
+const MODEL_TIMEOUT_MS = 60_000;
+
 // ─── Duplicate detection ────────────────────────────────────────────────
 // Jaccard similarity on words of 4+ characters. Catches "Write better Claude
 // prompts" against "How to improve your Claude prompting", which exact-title
@@ -132,30 +136,48 @@ export function pickTopic(rows) {
 // ─── Model call ─────────────────────────────────────────────────────────
 
 export async function callModel({ apiKey, model, topic, category, existingTitles, siteUrl }) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      // OpenRouter uses these for its own attribution page. Harmless, and it
-      // keeps the request identifiable in your OpenRouter activity log.
-      'HTTP-Referer': siteUrl || 'https://qivy.in',
-      'X-Title': 'Qivy Studio',
-    },
-    body: JSON.stringify({
-      model: model || DEFAULT_MODEL,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content:
-            `Write a Qivy article on this topic: ${topic}\n\n` +
-            `Category: ${category}\n\n` +
-            `Articles that already exist (do NOT duplicate any of these): ${existingTitles}`,
-        },
-      ],
-    }),
-  });
+  // Without this, a free-tier request that queues forever is not an error —
+  // it is silence. The fetch never settles, Cloudflare eventually kills the
+  // isolate, and the catch in /generate never runs, so nothing is written to
+  // `runs` at all. A failure you cannot see is worse than a slow one: you
+  // get a spinner and an empty history with no reason in it.
+  let res;
+  try {
+    res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        // OpenRouter uses these for its own attribution page. Harmless, and it
+        // keeps the request identifiable in your OpenRouter activity log.
+        'HTTP-Referer': siteUrl || 'https://qivy.in',
+        'X-Title': 'Qivy Studio',
+      },
+      body: JSON.stringify({
+        model: model || DEFAULT_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content:
+              `Write a Qivy article on this topic: ${topic}\n\n` +
+              `Category: ${category}\n\n` +
+              `Articles that already exist (do NOT duplicate any of these): ${existingTitles}`,
+          },
+        ],
+      }),
+    });
+  } catch (err) {
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      throw new Error(
+        `OpenRouter did not respond within ${MODEL_TIMEOUT_MS / 1000}s. ` +
+          'Free models queue behind paid traffic, so this is usually load ' +
+          'rather than a broken key — try again, or set a paid model in Settings.',
+      );
+    }
+    throw new Error(`Could not reach OpenRouter: ${err.message}`);
+  }
 
   const text = await res.text();
   if (!res.ok) {
