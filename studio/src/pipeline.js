@@ -28,6 +28,32 @@ export const SYSTEM_PROMPT = [
   '- British spelling. Plain language; explain jargon on first use.',
   '- India-first on pricing and availability ONLY where it changes the answer. A prompting technique is not regional.',
   '',
+  'READING LEVEL — this is the hardest rule to follow and the most important:',
+  '- Write so a bright twelve-year-old could follow it without asking anyone a question. The reader may be an expert, but nobody has ever complained that something was too easy to read.',
+  '- Short sentences. One idea each. Break up anything that needs a second comma to survive.',
+  '- Explain every piece of jargon in the same sentence you first use it, in plain words. Not "use chain-of-thought prompting" but "ask it to show its working, which people call chain-of-thought prompting".',
+  '- Where something is abstract, give one concrete everyday comparison — labelled boxes, giving someone directions, showing your working at school. One per section at most; they stop helping when they pile up.',
+  '- No throat-clearing, no "it is important to note", no "leverage", no "utilise", no "delve".',
+  '',
+  'A REFERENCE UNDER EVERY SECTION:',
+  '- Every ## section that states how something works ends with its own line, exactly in this form:',
+  '  Reference: [Page or section title](https://full-url)',
+  '- Link the most specific page you are sure of — a documentation page, or an anchor within one. Never a site home page, never a search result, never a URL you are not confident exists.',
+  '- Put every URL you cite into the "sources" array as well.',
+  '- A section with nothing worth referencing (a summary, a "what you should see") does not need one. Do not invent a link to satisfy the rule.',
+  '',
+  'FENCE ANYTHING WITH ANGLE BRACKETS — this one silently ruins articles:',
+  '- Any example containing <tags>, HTML, XML or JSX MUST sit inside a triple-backtick fence.',
+  '- Markdown passes raw tags straight through as real HTML. On the published page the tags vanish and only the text between them shows, so an article demonstrating tags loses the very thing it is demonstrating. It looks perfect in the editor and broken on the site.',
+  '',
+  'FRESH, NOT RECYCLED:',
+  '- Describe how the tool behaves now. If you are not sure whether a detail is still current, leave it out and point the reader at the documentation instead.',
+  '- Do not write a listicle of things the reader already knows. The angle has to be something they can act on.',
+  '',
+  'SEO, earned not stuffed:',
+  '- Headings say what the section does, in the words someone would actually type into a search box. "Put labels around each part of your message" beats "Technique 1".',
+  '- No keyword repetition for its own sake. The page is plain text with no images and no scripts, so clear structure and a real answer are the whole strategy.',
+  '',
   'LENGTH LIMITS — these are enforced by the site build and a breach fails the run:',
   '- title: 10-120 characters',
   '- summary: 20-300 characters, one sentence',
@@ -44,7 +70,7 @@ export const SYSTEM_PROMPT = [
   '  "metaDescription": "50-160 chars",',
   '  "tags": ["three", "to", "six"],',
   '  "sources": ["https://official-docs-url"],',
-  '  "body": "the article in Markdown, starting with a paragraph. Use ## for sections. Do NOT include an H1 — the title is rendered separately."',
+  '  "body": "the article in Markdown, starting with a paragraph. Use ## for sections, each ending with its own Reference: [title](url) line where it states how something works. Fence any example containing angle-bracket tags. Do NOT include an H1 — the title is rendered separately."',
   '}',
 ].join('\n');
 
@@ -195,13 +221,13 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
         'X-Title': 'Qivy Studio',
       },
       body: JSON.stringify({
-        // `models` (plural) is OpenRouter's own fallback routing: it walks the
-      // list on error and bills only the one that answers.
-      models: modelChain(model),
-      // The validator rejects anything that is not JSON, and a weaker
-      // fallback is far likelier to wrap it in chat. Every model in the
-      // chain supports this, so ask for the contract instead of hoping.
-      response_format: { type: 'json_object' },
+        // `models` (plural) is OpenRouter's own fallback routing: it walks
+        // the list on error and bills only the one that answers.
+        models: modelChain(model),
+        // The validator rejects anything that is not JSON, and a weaker
+        // fallback is far likelier to wrap it in chat. Every model in the
+        // chain supports this, so ask for the contract instead of hoping.
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           {
