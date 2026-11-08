@@ -20,6 +20,7 @@ import {
   FALLBACK_MODELS,
   MAX_CHAIN,
   unfencedTags,
+  checkSources,
 } from './src/pipeline.js';
 
 let passed = 0;
@@ -30,6 +31,21 @@ function test(name, fn) {
     console.log(`  ok   ${name}`);
   } catch (err) {
     console.error(`  FAIL ${name}\n       ${err.message}`);
+    process.exitCode = 1;
+  }
+}
+
+
+// test() calls fn() and catches synchronously, so an async body's rejection
+// would escape it and report a pass. This awaits.
+async function atest(name, fn) {
+  try {
+    await fn();
+    passed += 1;
+    console.log(`  ok   ${name}`);
+  } catch (err) {
+    console.error(`  FAIL ${name}
+       ${err.message}`);
     process.exitCode = 1;
   }
 }
@@ -224,6 +240,74 @@ test('the warning reaches the reviewer rather than throwing', () => {
     d.warnings.some((w) => /unfenced tags/i.test(w)),
     `expected an unfenced-tag warning, got: ${d.warnings.join(' | ')}`,
   );
+});
+
+console.log('\nSource checking');
+
+// A fake fetch, so these run offline and deterministically. The real thing
+// is exercised by the pipeline; what needs testing is the decision logic.
+const fakeFetch = (map) => async (url) => {
+  const r = map[url];
+  if (r === 'boom') throw Object.assign(new Error('network down'), { name: 'TypeError' });
+  return { status: r.status, url: r.url || url };
+};
+
+await atest('a live source raises nothing', async () => {
+  const r = await checkSources(['https://a.test/ok'], fakeFetch({ 'https://a.test/ok': { status: 200 } }));
+  assert.deepEqual(r.warnings, []);
+  assert.equal(r.allDead, false);
+});
+
+await atest('a 404 is named, not waved through', async () => {
+  // This is draft 2 verbatim: right vendor, plausible path, dead page.
+  const url = 'https://platform.openai.com/docs/guides/chat-completions/system-message';
+  const r = await checkSources([url], fakeFetch({ [url]: { status: 404 } }));
+  assert.equal(r.dead.length, 1);
+  assert.match(r.warnings[0], /HTTP 404/);
+  assert.match(r.warnings[0], /researched/);
+});
+
+await atest('every source dead is fatal, not a warning', async () => {
+  const r = await checkSources(
+    ['https://a.test/x', 'https://b.test/y'],
+    fakeFetch({ 'https://a.test/x': { status: 404 }, 'https://b.test/y': { status: 410 } }),
+  );
+  assert.equal(r.allDead, true);
+});
+
+await atest('one live source among dead ones is survivable', async () => {
+  const r = await checkSources(
+    ['https://a.test/x', 'https://b.test/ok'],
+    fakeFetch({ 'https://a.test/x': { status: 404 }, 'https://b.test/ok': { status: 200 } }),
+  );
+  assert.equal(r.allDead, false);
+  assert.equal(r.dead.length, 1);
+});
+
+await atest('a redirect is reported as a better URL, not a fault', async () => {
+  const r = await checkSources(
+    ['https://old.test/page'],
+    fakeFetch({ 'https://old.test/page': { status: 200, url: 'https://new.test/page' } }),
+  );
+  assert.deepEqual(r.dead, []);
+  assert.match(r.warnings[0], /canonical/i);
+  assert.match(r.warnings[0], /new\.test/);
+});
+
+await atest('HEAD refused falls back to GET before calling it dead', async () => {
+  let calls = 0;
+  const impl = async (url, opts) => {
+    calls += 1;
+    return opts.method === 'HEAD' ? { status: 405, url } : { status: 200, url };
+  };
+  const r = await checkSources(['https://picky.test/doc'], impl);
+  assert.equal(calls, 2, 'expected a GET after the HEAD was refused');
+  assert.deepEqual(r.dead, []);
+});
+
+await atest('an unreachable host is reported honestly, not as a 404', async () => {
+  const r = await checkSources(['https://gone.test/x'], fakeFetch({ 'https://gone.test/x': 'boom' }));
+  assert.match(r.dead[0], /could not be reached/);
 });
 
 console.log('\nMarkdown');

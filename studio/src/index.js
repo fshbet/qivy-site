@@ -20,6 +20,7 @@
 import { requireAccess } from './access.js';
 import {
   DEFAULT_MODEL,
+  checkSources,
   pickTopic,
   callModel,
   validateDraft,
@@ -74,6 +75,19 @@ async function generateDraft(env) {
     category: picked.topic.category,
     topicSimilarity: picked.similarity,
   });
+
+  // The validator proves a source is shaped like a URL. Only the network
+  // proves it leads anywhere, and "researched" is a claim about exactly
+  // that — so a citation is followed before the draft is stored.
+  const checked = await checkSources(draft.sources);
+  if (checked.allDead) {
+    throw new Error(
+      `Every cited source is dead or unreachable: ${checked.dead.join('; ')}. ` +
+        'An article marked "researched" with nothing a reader can follow is ' +
+        'unverifiable, so no draft was stored.',
+    );
+  }
+  draft.warnings.push(...checked.warnings);
 
   const inserted = await env.DB.prepare(
     `INSERT INTO drafts

@@ -170,6 +170,12 @@ explaining why. An unconfigured gate is an open door.
   experience under your byline.
 - A draft with **no source URL throws**. "Researched" without a source is
   unverifiable.
+- **Every cited URL is followed before the draft is stored.** The validator
+  can only prove a source is shaped like a URL; a model will cite the right
+  vendor on a plausible, dead path. A 404 among several sources is a warning
+  naming it; all of them dead throws, because then there is nothing a reader
+  can check. A redirect is reported with the canonical URL rather than
+  treated as a fault — vendors move docs constantly.
 - First-person language (`I tested`, `in my experience`) is detected and
   shown as a warning on the draft page for you to rewrite.
 - Word count, metaDescription length and slug are checked against the site's

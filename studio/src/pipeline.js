@@ -80,6 +80,10 @@ export const DEFAULT_MODEL = 'google/gemma-4-31b-it:free';
 // well past any normal free-tier queue and well inside a Worker's life.
 const MODEL_TIMEOUT_MS = 60_000;
 
+// Eight of these at most, once a day. Short: a slow doc site is not a
+// reason to fail a run, only a reason to say the link was unreachable.
+const SOURCE_TIMEOUT_MS = 10_000;
+
 // Tried in order when one errors — OpenRouter does the failing over itself,
 // so there is no retry loop here. Every entry is zero-priced and supports
 // response_format, checked against /api/v1/models on 2026-11-08.
@@ -415,6 +419,72 @@ export function validateDraft(raw, { category, topicSimilarity }) {
     warnings,
     words,
   };
+}
+
+// ─── Source checking ────────────────────────────────────────────────────
+
+// validateDraft stays pure and offline-testable, so this lives apart: it is
+// the one editorial rule that cannot be checked without the network.
+//
+// Why it is needed at all: the validator proves a source is shaped like a
+// URL, not that it leads anywhere. A model will happily cite
+// platform.openai.com/docs/guides/chat-completions/system-message — correct
+// vendor, plausible path, 404. An article carrying `verification:
+// researched` with a dead citation is unverifiable, which is the exact
+// claim that field is supposed to stand behind.
+//
+// Redirects are reported rather than treated as faults. Vendors move docs
+// constantly, and the old URL usually still works — but the canonical one
+// is what belongs in a published article.
+export async function checkSources(sources, impl = fetch) {
+  const dead = [];
+  const moved = [];
+
+  await Promise.all(
+    sources.map(async (url) => {
+      try {
+        // HEAD is cheaper, but plenty of doc sites answer 403/405 to it, so
+        // fall back to GET before believing a failure.
+        let res = await impl(url, {
+          method: 'HEAD',
+          redirect: 'follow',
+          signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
+        });
+        if (res.status === 403 || res.status === 405 || res.status === 501) {
+          res = await impl(url, {
+            method: 'GET',
+            redirect: 'follow',
+            signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
+          });
+        }
+        if (res.status >= 400) {
+          dead.push(`${url} (HTTP ${res.status})`);
+        } else if (res.url && res.url !== url) {
+          moved.push(`${url} -> ${res.url}`);
+        }
+      } catch (err) {
+        // A network error is not proof the page is gone, so say so plainly
+        // rather than declaring it dead.
+        dead.push(`${url} (could not be reached: ${err.name || err.message})`);
+      }
+    }),
+  );
+
+  const warnings = [];
+  if (dead.length) {
+    warnings.push(
+      `Dead or unreachable source${dead.length > 1 ? 's' : ''}: ${dead.join('; ')}. ` +
+        'This article is marked "researched", which is only honest if a reader ' +
+        'can follow the citation. Replace or remove it before publishing.',
+    );
+  }
+  if (moved.length) {
+    warnings.push(
+      `Source redirects, so the canonical URL differs: ${moved.join('; ')}. ` +
+        'Worth updating — the current link works today and may not next year.',
+    );
+  }
+  return { dead, moved, warnings, allDead: sources.length > 0 && dead.length === sources.length };
 }
 
 // ─── Markdown ───────────────────────────────────────────────────────────
