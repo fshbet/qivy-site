@@ -121,11 +121,16 @@ Open <https://write.qivy.in> → **Settings**.
   `openrouter.ai/api/v1/models` works; free ones end in `:free`.
 
   Whatever you set is the *primary*. If it errors, OpenRouter falls through
-  `FALLBACK_MODELS` in `pipeline.js` — currently NVIDIA, then XingChen, then
-  OpenRouter's auto-router. They are deliberately on different upstream
-  providers: a `429` means the primary's shared free pool is busy, and
-  another model from the same vendor would queue behind the same wall. The
-  draft page records which model actually answered.
+  `FALLBACK_MODELS` in `pipeline.js` — currently NVIDIA, then XingChen. They
+  are deliberately on different upstream providers: a `429` means the
+  primary's shared free pool is busy, and another model from the same vendor
+  would queue behind the same wall. The draft page records which model
+  actually answered.
+
+  **The chain can hold three models in total, primary included.** OpenRouter
+  rejects a longer `models` array with `HTTP 400`, which breaks every run
+  including the cron. `node studio/test.mjs` fails if the list outgrows
+  that, so add a fallback only by replacing one.
 - **GitHub token** — fine-grained PAT, **Contents: read and write** on
   `fshbet/qivy-site` only. Used solely when you press Publish.
 

@@ -18,6 +18,7 @@ import {
   buildMarkdown,
   modelChain,
   FALLBACK_MODELS,
+  MAX_CHAIN,
 } from './src/pipeline.js';
 
 let passed = 0;
@@ -177,6 +178,20 @@ test('no fallback shares the primary vendor, or it shares the rate limit', () =>
   const vendor = (m) => m.split('/')[0];
   const clash = FALLBACK_MODELS.filter((m) => vendor(m) === vendor('google/gemma-4-31b-it:free'));
   assert.deepEqual(clash, [], `same pool as the primary: ${clash.join(', ')}`);
+});
+
+test('the chain fits what OpenRouter accepts', () => {
+  // A 4th entry is HTTP 400 and breaks every run, cron included.
+  assert.ok(modelChain().length <= MAX_CHAIN, `chain is ${modelChain().length}`);
+});
+
+test('no fallback is silently dropped by the cap', () => {
+  // The slice in modelChain is a guard, not a budget. If the list outgrows
+  // the cap, the last entry never runs and nothing says so.
+  assert.ok(
+    FALLBACK_MODELS.length <= MAX_CHAIN - 1,
+    `${FALLBACK_MODELS.length} fallbacks but only ${MAX_CHAIN - 1} can ever be tried`,
+  );
 });
 
 console.log('\nMarkdown');

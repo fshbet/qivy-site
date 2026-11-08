@@ -65,7 +65,9 @@ const MODEL_TIMEOUT_MS = 60_000;
 //
 //   nvidia/nemotron-3.5-super-vl   NVIDIA        1M ctx
 //   xingchen-agi/xing4.0-29b-a4b   XingChen    262k ctx, text only
-//   openrouter/free                auto-router, last resort
+//
+// openrouter/free would have been a third, but the cap is 3 including the
+// primary, and an auto-router can route straight back to the busy pool.
 //
 // Deliberately excluded: google/gemma-4-26b-a4b-it:free (same pool as the
 // primary), the Lyria models (music, not text), and stealth/crouton-alpha
@@ -74,15 +76,23 @@ const MODEL_TIMEOUT_MS = 60_000;
 export const FALLBACK_MODELS = [
   'nvidia/nemotron-3.5-super-vl:free',
   'xingchen-agi/xing4.0-29b-a4b:free',
-  'openrouter/free',
 ];
+
+// OpenRouter rejects a longer array outright: HTTP 400, "'models' array must
+// have 3 items or fewer". So this is a hard ceiling on primary + fallbacks,
+// not a preference. Adding a third fallback breaks EVERY run, including the
+// cron, which is why the test asserts the list still fits rather than
+// trusting the slice below to quietly drop one.
+const MAX_CHAIN = 3;
 
 // Primary first, no repeats. A duplicate would spend a fallback slot on a
 // model that just failed.
 export function modelChain(primary) {
   const first = primary || DEFAULT_MODEL;
-  return [first, ...FALLBACK_MODELS.filter((m) => m !== first)];
+  return [first, ...FALLBACK_MODELS.filter((m) => m !== first)].slice(0, MAX_CHAIN);
 }
+
+export { MAX_CHAIN };
 
 // ─── Duplicate detection ────────────────────────────────────────────────
 // Jaccard similarity on words of 4+ characters. Catches "Write better Claude

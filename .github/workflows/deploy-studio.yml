@@ -39,6 +39,12 @@ jobs:
         run: |
           for f in studio/src/*.js; do node --check "$f"; done
 
+      # Syntax-only was not enough: a chain that exceeded OpenRouter's
+      # 3-model limit parsed fine and broke every run with HTTP 400. The
+      # tests encode limits like that, so they gate the deploy now.
+      - name: Tests
+        run: node studio/test.mjs
+
       # Until the token exists this is "not set up yet", not "broken". A red
       # X for unfinished setup trains you to ignore red X's.
       - name: Is the Cloudflare token set?
