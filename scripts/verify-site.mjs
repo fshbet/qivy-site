@@ -8,7 +8,7 @@
  *   1. Every internal link resolves (no 404s)
  *   2. No console errors or page errors on any page
  *   3. No horizontal overflow at 320 / 375 / 414 / 768 / 1024 / 1440 px
- *   4. Required SEO metadata present and unique on every page
+ *   4. Required SEO metadata present and unique, and JSON-LD still parses
  *   5. axe-core accessibility violations
  *   6. Heading hierarchy valid (one h1, no skipped levels)
  *   7. Images have alt, external links have rel=noopener
@@ -157,11 +157,15 @@ for (const route of all) {
     else descs.set(seo.desc, route);
   }
 
+  // This is a security check as much as an SEO one: a `</script>` inside any
+  // JSON-LD string closes the element early, so the rest of that value stops
+  // being data and becomes live HTML. Article titles are model-written, which
+  // makes that reachable. A parse failure here is the symptom.
   for (const raw of seo.ld) {
     try {
       JSON.parse(raw);
     } catch {
-      fail(route, 'invalid JSON-LD');
+      fail(route, 'JSON-LD does not parse — script element closed early by its own content?');
     }
   }
 

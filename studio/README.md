@@ -147,7 +147,7 @@ against its cited sources, edit the file in the textarea, and **Publish**.
 ## Why it fails closed
 
 This app can spend money and commit to a public repository, so it refuses to
-serve at all until Access is configured. There are two locks:
+serve at all until Access is configured. There are three locks:
 
 1. `workers_dev = false` in `wrangler.toml`. Cloudflare Access protects a
    *hostname*; it does nothing for the `*.workers.dev` URL. Leaving that on
@@ -156,9 +156,41 @@ serve at all until Access is configured. There are two locks:
    public keys, and checks `aud`, `iss` and `exp`. A forged or borrowed
    header does not get in, and a token for one of your *other* Access apps
    does not either.
+3. Every POST must come from this app's own pages. Access authenticates the
+   *browser*, not the page a request came from — it attaches your
+   `CF_Authorization` cookie to a form on someone else's site just as
+   readily as to one of ours. Without an origin check, any page you happened
+   to visit while signed in could publish to the repository as you. Requests
+   with a missing or foreign `Origin` get a 403.
 
 If `ACCESS_TEAM_DOMAIN` or `ACCESS_AUD` is empty, every request gets a 503
 explaining why. An unconfigured gate is an open door.
+
+### What Publish refuses to commit
+
+Markdown does not escape raw HTML — it hands it to the page. An unfenced
+`<script>` in an article is not an example of a script tag, it *is* one, and
+it runs for every reader of qivy.in.
+
+So Publish refuses a file containing, outside a code fence: `<script>`,
+`<iframe>`, `<object>`, `<embed>`, `<base>`, `<meta>`, `<link>`, `<form>`,
+`<style>`, `<svg>`, an inline `on…=` handler, or a `javascript:` link. Fenced
+examples are untouched — an article about HTML can still show one.
+
+The drafting step only *warns* about raw tags, because at that point nobody
+has decided to publish anything. At the Publish button the warning has
+already been read past once, so this one is a refusal rather than a note.
+
+### What is not covered
+
+- Article frontmatter is model-written and ends up inside the page's JSON-LD.
+  `src/layouts/BaseLayout.astro` escapes `<` as `<` there, and
+  `scripts/verify-site.mjs` fails the site build if any JSON-LD block stops
+  parsing. Both matter: the first stops the breakout, the second notices if
+  a future change reintroduces one.
+- Nothing here rate-limits the Generate button. One signed-in person pressing
+  it repeatedly can spend your OpenRouter quota; Access decides who that
+  person is, and that is the whole access-control story.
 
 ---
 
@@ -208,12 +240,15 @@ Everything here is on a free tier at this volume.
 node studio/test.mjs
 ```
 
-18 checks over duplicate detection, the validator and Markdown generation.
-No framework.
+51 checks over duplicate detection, the validator, Markdown generation, the
+model fallback chain, source checking, the HTML that Publish refuses, and the
+cross-site origin rule. No framework.
 
-What they do **not** cover: the Access JWT path, D1/KV bindings, the
-OpenRouter call and the GitHub commit. Those need a live environment, and
-none of them has run yet — the first real draft will be the first proof.
+What they do **not** cover: the Access JWT verified against real Cloudflare
+keys, the D1 and KV bindings, the OpenRouter call and the GitHub commit.
+Those need a live environment. All four have since run for real and one
+article is published — but that was observed, not asserted, and no automated
+test exercises them.
 
 To re-check the schema contract after changing `buildMarkdown()`:
 

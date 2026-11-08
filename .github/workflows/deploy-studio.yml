@@ -23,6 +23,12 @@ on:
       - '.github/workflows/deploy-studio.yml'
   workflow_dispatch:
 
+# This workflow reads its own source and talks to Cloudflare; it needs nothing
+# else from the repository. Stated here rather than inherited, so it does not
+# quietly widen if the account-wide default is ever changed from "read".
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

@@ -292,15 +292,45 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
 // prompting then publishes with its examples gutted — and it looks correct
 // in the draft box, because that is a textarea showing the source.
 // Fenced and inline code are escaped properly, so only unfenced tags matter.
-export function unfencedTags(body) {
-  const bare = body
+/** Everything outside a code fence — where markdown passes HTML through. */
+export function stripFences(body) {
+  return body
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/~~~[\s\S]*?~~~/g, ' ')
     .replace(/`[^`\n]*`/g, ' ');
+}
+
+export function unfencedTags(body) {
+  const bare = stripFences(body);
   const found = new Set();
   for (const [, tag] of bare.matchAll(/<\/?([a-zA-Z][a-zA-Z0-9-]*)\s*\/?>/g)) {
     found.add(tag.toLowerCase());
   }
+  return [...found];
+}
+
+// Tags with no business in an article, and every one of them a way to run
+// code on qivy.in. Unfenced HTML in markdown is not escaped — it becomes
+// part of the page — so this is the difference between showing an example
+// and executing it.
+const DANGEROUS_TAGS = /^(script|iframe|object|embed|base|meta|link|form|style|svg)$/;
+
+/**
+ * Reasons this markdown must not be published, if any.
+ *
+ * Fenced examples are fine: an article about HTML should be able to show a
+ * script tag. This is only about markup that would reach the live page.
+ */
+export function dangerousHtml(markdown) {
+  const found = new Set();
+  for (const tag of unfencedTags(markdown)) {
+    if (DANGEROUS_TAGS.test(tag)) found.add(`<${tag}>`);
+  }
+  const bare = stripFences(markdown);
+  // Matched only inside a real tag, so prose containing "only=" is not an
+  // event handler and a sentence mentioning javascript: is not a link.
+  if (/<[a-zA-Z][^>]*\son[a-zA-Z]+\s*=/.test(bare)) found.add('an inline event handler');
+  if (/(href|src)\s*=\s*["']?\s*javascript:/i.test(bare)) found.add('a javascript: URL');
   return [...found];
 }
 
@@ -381,6 +411,9 @@ export function validateDraft(raw, { category, topicSimilarity }) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
+  // "!!!" is non-empty and normalises to nothing, which would commit a
+  // file called ".md". The required-field check above cannot see that.
+  if (!slug) throw new Error(`The slug contained nothing usable: "${a.slug}"`);
 
   const warnings = [];
   if (hits.length) {

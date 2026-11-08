@@ -92,10 +92,17 @@ const siteName = 'Qivy';
     />
 
     {
+      /*
+        `</script>` inside any string would end this element early and turn
+        the rest of the title into live HTML — article frontmatter is written
+        by a model, so that is reachable, not theoretical. Escaping `<` as
+        \\u003c keeps the JSON valid and inert: a JSON parser reads it back as
+        `<`, an HTML parser never sees a tag.
+      */
       schemas.map((schema) => (
         <script
           type="application/ld+json"
-          set:html={JSON.stringify(schema)}
+          set:html={JSON.stringify(schema).replace(/</g, '\\u003c')}
         />
       ))
     }

@@ -21,6 +21,7 @@ import { requireAccess } from './access.js';
 import {
   DEFAULT_MODEL,
   checkSources,
+  dangerousHtml,
   pickTopic,
   callModel,
   validateDraft,
@@ -320,6 +321,17 @@ async function settingsPage(env, url) {
 
 // ─── Routing ────────────────────────────────────────────────────────────
 
+/** True when a state-changing request came from this app's own pages. */
+export function isSameOrigin(request, url) {
+  const from = request.headers.get('Origin') || request.headers.get('Referer');
+  if (!from) return false;
+  try {
+    return new URL(from).origin === url.origin;
+  } catch {
+    return false;
+  }
+}
+
 const redirect = (to) => new Response(null, { status: 303, headers: { Location: to } });
 const html = (s) =>
   new Response(s, {
@@ -347,6 +359,22 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const method = request.method;
+
+    // Access authenticates the BROWSER, not the page the request came from.
+    // It attaches CF_Authorization to a cross-site form POST exactly as
+    // readily as to one of ours, and this app commits to a public
+    // repository -- so any page the reviewer happens to visit while signed
+    // in could publish on their behalf. Browsers send Origin on every POST;
+    // our own Referrer-Policy strips Referer, so Origin is what does the
+    // work here and Referer is only a fallback.
+    if (method !== 'GET' && method !== 'HEAD') {
+      if (!isSameOrigin(request, url)) {
+        return new Response(
+          'Cross-site request refused. Use the form on the dashboard itself.',
+          { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
+        );
+      }
+    }
 
     try {
       if (method === 'GET' && path === '/') return html(await queuePage(env, url));
@@ -420,6 +448,22 @@ export default {
           if (!markdown.trim().startsWith('---')) {
             return redirect(
               `/draft/${id}?err=${encodeURIComponent('The file must start with a --- frontmatter block.')}`,
+            );
+          }
+
+          // The last gate before the public site. Markdown hands raw HTML
+          // straight to the page, so an unfenced script tag here does not
+          // show as an example -- it runs, for every reader. The validator
+          // only warns about this; by the time someone is pressing Publish
+          // a warning has already been read past once.
+          const risky = dangerousHtml(markdown);
+          if (risky.length) {
+            return redirect(
+              `/draft/${id}?err=${encodeURIComponent(
+                `Not published: this file contains ${risky.join(' and ')} outside a code fence. ` +
+                  'Markdown passes raw HTML to the page, so it would run on qivy.in rather than ' +
+                  'being shown. Wrap it in a triple-backtick fence, or delete it.',
+              )}`,
             );
           }
 

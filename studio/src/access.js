@@ -20,6 +20,7 @@
 let cachedKeys = null;
 let cachedAt = 0;
 const KEY_TTL_MS = 60 * 60 * 1000;
+const FORCE_MIN_MS = 60 * 1000;
 
 function b64urlToBytes(input) {
   const padded = input.replace(/-/g, '+').replace(/_/g, '/');
@@ -33,15 +34,25 @@ function b64urlToJson(input) {
   return JSON.parse(new TextDecoder().decode(b64urlToBytes(input)));
 }
 
-async function getKeys(teamDomain) {
+async function getKeys(teamDomain, force = false) {
   const now = Date.now();
-  if (cachedKeys && now - cachedAt < KEY_TTL_MS) return cachedKeys;
+  if (!force && cachedKeys && now - cachedAt < KEY_TTL_MS) return cachedKeys;
+  // A forced refetch is triggered by an unknown kid, which is attacker-
+  // controlled, so it is throttled: at most one key fetch a minute no matter
+  // how many odd tokens arrive.
+  if (force && cachedKeys && now - cachedAt < FORCE_MIN_MS) return cachedKeys;
 
   const res = await fetch(`https://${teamDomain}/cdn-cgi/access/certs`);
   if (!res.ok) throw new Error(`Access certs fetch failed: HTTP ${res.status}`);
 
   const body = await res.json();
-  cachedKeys = body.keys || [];
+  const keys = body.keys || [];
+  // Caching an empty answer would refuse every request for the full hour
+  // instead of for this one. Treat it as a failure, which fails closed with
+  // a 503 the next caller can retry past.
+  if (!keys.length) throw new Error('Access returned no signing keys.');
+
+  cachedKeys = keys;
   cachedAt = now;
   return cachedKeys;
 }
@@ -100,26 +111,46 @@ export async function requireAccess(request, env) {
     return { ok: false, status: 503, message: `Access key lookup failed: ${err.message}` };
   }
 
-  const jwk = keys.find((k) => k.kid === header.kid);
+  let jwk = keys.find((k) => k.kid === header.kid);
+  if (!jwk) {
+    // Access rotates its signing keys. An unknown kid is far more often a
+    // stale cache than a forged token, and refusing it for the rest of the
+    // hour would lock the dashboard out of its own gate. Refetch once.
+    try {
+      keys = await getKeys(team, true);
+    } catch (err) {
+      return { ok: false, status: 503, message: `Access key lookup failed: ${err.message}` };
+    }
+    jwk = keys.find((k) => k.kid === header.kid);
+  }
   if (!jwk) {
     return { ok: false, status: 401, message: 'Access token signed by an unknown key.' };
   }
 
-  const cryptoKey = await crypto.subtle.importKey(
-    'jwk',
-    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: 'RS256', ext: true },
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['verify'],
-  );
+  // Every step here reads attacker-controlled bytes. b64urlToBytes throws on
+  // a malformed segment, and an exception escaping this module would leave
+  // the request unhandled rather than refused -- so it is a 401, like every
+  // other unreadable token.
+  let valid = false;
+  try {
+    const cryptoKey = await crypto.subtle.importKey(
+      'jwk',
+      { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: 'RS256', ext: true },
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
 
-  const signed = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
-  const valid = await crypto.subtle.verify(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    b64urlToBytes(parts[2]),
-    signed,
-  );
+    const signed = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+    valid = await crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      cryptoKey,
+      b64urlToBytes(parts[2]),
+      signed,
+    );
+  } catch {
+    return { ok: false, status: 401, message: 'Access token could not be verified.' };
+  }
   if (!valid) {
     return { ok: false, status: 401, message: 'Access token signature is not valid.' };
   }
