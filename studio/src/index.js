@@ -321,10 +321,33 @@ async function settingsPage(env, url) {
 
 // ─── Routing ────────────────────────────────────────────────────────────
 
-/** True when a state-changing request came from this app's own pages. */
+/**
+ * True when a state-changing request came from this app's own pages.
+ *
+ * Sec-Fetch-Site is asked first because it is the only one of these three
+ * that survives our own Referrer-Policy. Measured, after this function
+ * refused the dashboard's own Generate button: under
+ * `Referrer-Policy: no-referrer` a same-origin form POST arrives with
+ * `Origin: null` and no Referer at all, while Sec-Fetch-Site still reads
+ * `same-origin`. The policy is `same-origin` now so the fallback below is
+ * real rather than decorative, but the ordering is what makes this robust
+ * to the header being tightened again later.
+ *
+ * It is also the harder header to forge: Sec-Fetch-Site is a forbidden
+ * header name, so no script on any page can set it.
+ */
 export function isSameOrigin(request, url) {
+  const site = request.headers.get('Sec-Fetch-Site');
+  // `same-site` is deliberately refused: qivy.in and write.qivy.in share a
+  // registrable domain, and qivy.in serves model-written pages.
+  if (site) return site === 'same-origin';
+
+  // Only reached on a browser old enough to send no Sec-Fetch-Site.
   const from = request.headers.get('Origin') || request.headers.get('Referer');
-  if (!from) return false;
+  // "null" is a value, not an absence — a sandboxed iframe and a
+  // cross-origin redirect both send exactly that. Parsing it would throw,
+  // and treating it as ours would be the hole this function exists to close.
+  if (!from || from === 'null') return false;
   try {
     return new URL(from).origin === url.origin;
   } catch {
@@ -333,18 +356,22 @@ export function isSameOrigin(request, url) {
 }
 
 const redirect = (to) => new Response(null, { status: 303, headers: { Location: to } });
-const html = (s) =>
-  new Response(s, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'X-Robots-Tag': 'noindex, nofollow',
-      'Referrer-Policy': 'no-referrer',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'Content-Security-Policy':
-        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
-    },
-  });
+
+// Exported so a test can hold the Referrer-Policy to account: `no-referrer`
+// here silently kills the Origin fallback in isSameOrigin, which is how the
+// Generate button came to refuse itself. `same-origin` still sends nothing
+// to any other site.
+export const SECURITY_HEADERS = {
+  'Content-Type': 'text/html; charset=utf-8',
+  'X-Robots-Tag': 'noindex, nofollow',
+  'Referrer-Policy': 'same-origin',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Content-Security-Policy':
+    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+};
+
+const html = (s) => new Response(s, { headers: SECURITY_HEADERS });
 
 export default {
   async fetch(request, env) {
@@ -364,9 +391,9 @@ export default {
     // It attaches CF_Authorization to a cross-site form POST exactly as
     // readily as to one of ours, and this app commits to a public
     // repository -- so any page the reviewer happens to visit while signed
-    // in could publish on their behalf. Browsers send Origin on every POST;
-    // our own Referrer-Policy strips Referer, so Origin is what does the
-    // work here and Referer is only a fallback.
+    // in could publish on their behalf. isSameOrigin reads Sec-Fetch-Site
+    // for this, because Origin is NOT reliably present: see the note there
+    // for what a same-origin POST actually carries.
     if (method !== 'GET' && method !== 'HEAD') {
       if (!isSameOrigin(request, url)) {
         return new Response(

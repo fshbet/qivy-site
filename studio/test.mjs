@@ -23,7 +23,7 @@ import {
   checkSources,
   dangerousHtml,
 } from './src/pipeline.js';
-import { isSameOrigin } from './src/index.js';
+import { isSameOrigin, SECURITY_HEADERS } from './src/index.js';
 import { requireAccess } from './src/access.js';
 
 let passed = 0;
@@ -425,6 +425,49 @@ test('an unparseable Origin is refused', () => {
 test('Referer is accepted as the fallback it is', () => {
   assert.equal(isSameOrigin(req({ Referer: 'https://write.qivy.in/draft/1' }), here), true);
 });
+// The bug these exist for: the gate refused the dashboard's own Generate
+// button. Measured cause — under `Referrer-Policy: no-referrer` a
+// same-origin form POST sends `Origin: null` and no Referer, so the Origin
+// check could never pass from our own pages.
+test('our own form POST is allowed when Referrer-Policy has nulled Origin', () => {
+  assert.equal(
+    isSameOrigin(req({ Origin: 'null', 'Sec-Fetch-Site': 'same-origin' }), here),
+    true,
+  );
+});
+
+test('Origin: null on its own is refused, not parsed', () => {
+  // A sandboxed iframe and a cross-origin redirect both send this.
+  assert.equal(isSameOrigin(req({ Origin: 'null' }), here), false);
+});
+
+test('Sec-Fetch-Site decides even when Origin looks right', () => {
+  // Script cannot set Sec-Fetch-Site, so where the two disagree the
+  // browser's own account of the request wins.
+  assert.equal(
+    isSameOrigin(req({ Origin: 'https://write.qivy.in', 'Sec-Fetch-Site': 'cross-site' }), here),
+    false,
+  );
+});
+
+test('same-site is not same-origin', () => {
+  // qivy.in shares a registrable domain with write.qivy.in and serves
+  // model-written pages, so this must not be waved through.
+  assert.equal(isSameOrigin(req({ 'Sec-Fetch-Site': 'same-site' }), here), false);
+});
+
+test('a direct navigation cannot POST its way in', () => {
+  assert.equal(isSameOrigin(req({ 'Sec-Fetch-Site': 'none' }), here), false);
+});
+
+test('the pages do not set a Referrer-Policy that kills the fallback', () => {
+  // no-referrer here makes the Origin branch above unreachable from our own
+  // pages. This is the coupling that caused the bug, so it is asserted
+  // rather than left as a comment.
+  assert.notEqual(SECURITY_HEADERS['Referrer-Policy'], 'no-referrer');
+  assert.equal(SECURITY_HEADERS['Referrer-Policy'], 'same-origin');
+});
+
 
 console.log('\nThe Access gate');
 

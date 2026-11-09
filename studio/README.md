@@ -160,8 +160,17 @@ serve at all until Access is configured. There are three locks:
    *browser*, not the page a request came from — it attaches your
    `CF_Authorization` cookie to a form on someone else's site just as
    readily as to one of ours. Without an origin check, any page you happened
-   to visit while signed in could publish to the repository as you. Requests
-   with a missing or foreign `Origin` get a 403.
+   to visit while signed in could publish to the repository as you. Anything
+   other than `Sec-Fetch-Site: same-origin` gets a 403.
+
+   It reads `Sec-Fetch-Site` rather than `Origin` because `Origin` is not
+   reliably there. Measured: under `Referrer-Policy: no-referrer` a
+   same-origin form POST arrives with `Origin: null` and no Referer, which
+   is how the first version of this check came to refuse the dashboard's own
+   Generate button. The policy is `same-origin` now, so the `Origin`
+   fallback works for a browser too old to send `Sec-Fetch-Site` — and a
+   test holds that policy in place, because tightening it back to
+   `no-referrer` would silently kill the fallback again.
 
 If `ACCESS_TEAM_DOMAIN` or `ACCESS_AUD` is empty, every request gets a 503
 explaining why. An unconfigured gate is an open door.
@@ -240,7 +249,7 @@ Everything here is on a free tier at this volume.
 node studio/test.mjs
 ```
 
-62 checks over duplicate detection, the validator, Markdown generation, the
+68 checks over duplicate detection, the validator, Markdown generation, the
 model fallback chain, source checking, the HTML that Publish refuses, the
 cross-site origin rule, and the Access gate. No framework.
 
