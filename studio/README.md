@@ -10,7 +10,7 @@ n8n instance runs on a PC at `D:\AI\n8n` behind a Cloudflare Tunnel, so the
 on Cloudflare's own cron and depends on nothing you own being switched on.
 
 ```
-cron 00:30 UTC (06:00 IST)
+cron 00:30 / 08:30 / 16:30 UTC  (06:00, 14:00, 22:00 IST)
    ↓  pick a topic, skip near-duplicates      (D1)
    ↓  draft it                                 (OpenRouter)
    ↓  validate against the editorial rules     — fails loudly, publishes nothing

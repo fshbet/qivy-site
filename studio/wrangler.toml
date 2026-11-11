@@ -24,10 +24,17 @@ database_id = "b6a92c24-9238-4fd1-b778-9e3cbbc02aac"
 binding = "SETTINGS"
 id = "e9af20372ba641b692492afc84d9046e"
 
-# 00:30 UTC = 06:00 IST. This replaces the n8n schedule, which only ran when
-# your PC was on.
+# Three drafts a day: 06:00, 14:00 and 22:00 IST. This replaces the n8n
+# schedule, which only ran when your PC was on.
+#
+# Three separate triggers rather than a loop inside one run, and the handler
+# is unchanged. Each run picks its own topic -- the previous run has already
+# marked its topic `drafted`, so no two can land on the same one -- and a
+# failure in one run costs that draft rather than the other two. Spacing them
+# eight hours apart also keeps three model calls off the same rate-limit
+# window, which is the thing most likely to fail on a free model.
 [triggers]
-crons = ["30 0 * * *"]
+crons = ["30 0 * * *", "30 8 * * *", "30 16 * * *"]
 
 [vars]
 GITHUB_OWNER = "fshbet"
