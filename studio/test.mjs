@@ -22,6 +22,7 @@ import {
   unfencedTags,
   checkSources,
   dangerousHtml,
+  publishedLinks,
 } from './src/pipeline.js';
 import { isSameOrigin, SECURITY_HEADERS } from './src/index.js';
 import { requireAccess } from './src/access.js';
@@ -384,6 +385,85 @@ test('a real published article passes', () => {
     '## Heading\n\nSome text with `inline code` and a [link](https://example.com).\n\n```bash\ncurl -s https://example.com\n```\n',
   );
   assert.deepEqual(r, []);
+});
+
+console.log('\nLinks the published file would carry');
+
+// The publish gate checks these, so what counts as a link decides what can
+// block a publish. Over-matching here means a code sample can wedge the
+// button shut; under-matching means a 404 ships in the prose.
+const article = [
+  '---',
+  "title: 'Structured output'",
+  'sources:',
+  "  - 'https://live.test/a'",
+  "  - 'https://gone.test/b'",
+  '---',
+  '',
+  'See the [best practices guide](https://gone.test/b) for more.',
+  '',
+  'Call it like this:',
+  '',
+  '```bash',
+  'curl https://placeholder.test/v1/chat',
+  '```',
+  '',
+  'Docs are at https://live.test/a.',
+].join('\n');
+
+test('a frontmatter source and a body link are both found', () => {
+  const links = publishedLinks(article);
+  assert.ok(links.includes('https://live.test/a'), links.join(' | '));
+  assert.ok(links.includes('https://gone.test/b'), links.join(' | '));
+});
+
+test('a URL inside a fence is not one of them', () => {
+  // An article about an API has to be able to show an endpoint that does
+  // not resolve. If this leaks, the fix for a blocked publish would be to
+  // delete the example.
+  assert.equal(publishedLinks(article).includes('https://placeholder.test/v1/chat'), false);
+});
+
+test('inline code is left alone too', () => {
+  assert.deepEqual(publishedLinks('Set `https://api.example.com/v1` as the base.'), []);
+});
+
+test('the full stop at the end of a sentence is not part of the URL', () => {
+  assert.deepEqual(publishedLinks('Docs are at https://live.test/a.'), ['https://live.test/a']);
+});
+
+test('a trailing slash is part of the URL, though', () => {
+  assert.deepEqual(publishedLinks('See https://live.test/a/ for more'), ['https://live.test/a/']);
+});
+
+test('markdown link syntax does not leave a bracket on the end', () => {
+  assert.deepEqual(publishedLinks('a [doc](https://live.test/a) here'), ['https://live.test/a']);
+});
+
+test('the same link cited and linked is checked once', () => {
+  assert.equal(publishedLinks(article).filter((u) => u === 'https://gone.test/b').length, 1);
+});
+
+await atest('the draft that prompted this gate would be refused', async () => {
+  // Exactly the shape of draft 4: three links, one of them a 404, and the
+  // dead one in both the sources array and the prose.
+  const { dead } = await checkSources(
+    publishedLinks(article),
+    fakeFetch({
+      'https://live.test/a': { status: 200 },
+      'https://gone.test/b': { status: 404 },
+    }),
+  );
+  assert.equal(dead.length, 1);
+  assert.match(dead[0], /gone\.test\/b \(HTTP 404\)/);
+});
+
+await atest('a file whose links all resolve is not blocked', async () => {
+  const { dead } = await checkSources(
+    publishedLinks('Docs: https://live.test/a'),
+    fakeFetch({ 'https://live.test/a': { status: 200 } }),
+  );
+  assert.deepEqual(dead, []);
 });
 
 test('a slug that normalises to nothing is refused, not committed as .md', () => {

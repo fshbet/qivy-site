@@ -456,6 +456,31 @@ export function validateDraft(raw, { category, topicSimilarity }) {
 
 // ─── Source checking ────────────────────────────────────────────────────
 
+/**
+ * Every http(s) link this file would publish as something a reader can click.
+ *
+ * Deliberately not the same list as the frontmatter `sources`. A dead
+ * citation can sit in the prose while the sources array is clean -- the
+ * draft that prompted this had the same 404 in both places -- and a reader
+ * clicking it neither knows nor cares which array it came from.
+ *
+ * Fenced and inline code comes out first, via the same helper the HTML check
+ * uses: an article about an API has to be able to show
+ * `POST https://api.example.com/v1/thing` without that placeholder having to
+ * resolve.
+ */
+export function publishedLinks(markdown) {
+  const found = new Set();
+  // Stopping at a quote or bracket is what makes YAML quoting and markdown
+  // link syntax both come out clean.
+  for (const [u] of stripFences(markdown).matchAll(/https?:\/\/[^\s)'"<>\]]+/g)) {
+    // Prose owns the full stop, not the URL. A real path can end in "/", so
+    // only sentence punctuation comes off.
+    found.add(u.replace(/[.,;:!?]+$/, ''));
+  }
+  return [...found];
+}
+
 // validateDraft stays pure and offline-testable, so this lives apart: it is
 // the one editorial rule that cannot be checked without the network.
 //

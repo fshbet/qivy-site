@@ -190,6 +190,25 @@ The drafting step only *warns* about raw tags, because at that point nobody
 has decided to publish anything. At the Publish button the warning has
 already been read past once, so this one is a refusal rather than a note.
 
+Publish also refuses a file containing **any unreachable link** — not just a
+dead entry in `sources`, but a dead link anywhere in the prose, since a reader
+clicking one neither knows nor cares which it came from. The page ships
+`verification: researched`, and that is a promise the links can be followed.
+
+Two details worth knowing, because they decide what this blocks:
+
+- Links inside code fences are ignored. An article about an API has to be able
+  to show `POST https://api.example.com/v1/thing` without the placeholder
+  having to resolve. A test holds this, because leaking it would mean the fix
+  for a stuck Publish button is to delete the example.
+- The check runs against the textarea, not the stored draft. The textarea is
+  what gets committed, so fixing the link there is what makes Publish pass.
+
+A site that answers 403 to both HEAD and GET reads as dead here, so a live
+page behind strict bot protection can block a publish. The way out is to
+replace or drop the link, which is the honest fix anyway — there is no
+override flag, deliberately.
+
 ### What is not covered
 
 - Article frontmatter is model-written and ends up inside the page's JSON-LD.
@@ -213,10 +232,11 @@ already been read past once, so this one is a refusal rather than a note.
   unverifiable.
 - **Every cited URL is followed before the draft is stored.** The validator
   can only prove a source is shaped like a URL; a model will cite the right
-  vendor on a plausible, dead path. A 404 among several sources is a warning
-  naming it; all of them dead throws, because then there is nothing a reader
-  can check. A redirect is reported with the canonical URL rather than
-  treated as a fault — vendors move docs constantly.
+  vendor on a plausible, dead path. All of them dead throws at drafting time,
+  because then there is nothing a reader can check; a 404 among several is a
+  warning naming it, and then **a refusal at the Publish button** — see
+  "What Publish refuses to commit". A redirect is reported with the canonical
+  URL rather than treated as a fault — vendors move docs constantly.
 - First-person language (`I tested`, `in my experience`) is detected and
   shown as a warning on the draft page for you to rewrite.
 - Word count, metaDescription length and slug are checked against the site's
@@ -249,7 +269,7 @@ Everything here is on a free tier at this volume.
 node studio/test.mjs
 ```
 
-68 checks over duplicate detection, the validator, Markdown generation, the
+77 checks over duplicate detection, the validator, Markdown generation, the
 model fallback chain, source checking, the HTML that Publish refuses, the
 cross-site origin rule, and the Access gate. No framework.
 

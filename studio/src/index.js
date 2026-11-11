@@ -22,6 +22,7 @@ import {
   DEFAULT_MODEL,
   checkSources,
   dangerousHtml,
+  publishedLinks,
   pickTopic,
   callModel,
   validateDraft,
@@ -490,6 +491,29 @@ export default {
                 `Not published: this file contains ${risky.join(' and ')} outside a code fence. ` +
                   'Markdown passes raw HTML to the page, so it would run on qivy.in rather than ' +
                   'being shown. Wrap it in a triple-backtick fence, or delete it.',
+              )}`,
+            );
+          }
+
+          // The same reasoning one step further out. A dead citation is
+          // already warned about at generation time, but a warning on the
+          // review page is precisely the thing that gets read past -- on the
+          // draft that prompted this gate, it was. The file ships
+          // `verification: researched`, which is a promise that the reader
+          // can follow the links, so an unreachable one refuses the publish
+          // instead of annotating it.
+          //
+          // Checked against the submitted markdown, not the stored row: the
+          // textarea is editable and is what gets committed, so fixing the
+          // link there is what has to make this pass.
+          const { dead } = await checkSources(publishedLinks(markdown));
+          if (dead.length) {
+            const one = dead.length === 1;
+            return redirect(
+              `/draft/${id}?err=${encodeURIComponent(
+                `Not published: ${one ? 'a link in this file is' : `${dead.length} links in this file are`} ` +
+                  `unreachable — ${dead.join('; ')}. An article marked "researched" is only honest if a ` +
+                  `reader can follow its links, so fix or remove ${one ? 'it' : 'them'} above and publish again.`,
               )}`,
             );
           }
