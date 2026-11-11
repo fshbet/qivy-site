@@ -6,11 +6,15 @@
  * trigger drafts, and this page is where drafts are reviewed, edited and
  * published.
  *
- *   cron 00:30 UTC (06:00 IST)  ->  pick topic  ->  OpenRouter  ->  validate
- *                               ->  store draft in D1  ->  waits for you
- *   you press Publish           ->  commit to GitHub  ->  Pages build  ->  live
+ *   cron 00:30 / 08:30 / 16:30 UTC  ->  pick topic  ->  OpenRouter
+ *                                   ->  validate  ->  store draft in D1
+ *   you press Publish               ->  commit to GitHub  ->  Pages  ->  live
  *
- * Nothing publishes on its own. That is the whole point of the gate.
+ * By default nothing publishes on its own. Auto-approve, off until you turn
+ * it on from the dashboard, lets a *clean* scheduled draft commit itself —
+ * clean meaning the validator raised no warning and `publishChecked` found
+ * nothing wrong with the file. Everything else still stops and waits, and
+ * the Generate button never auto-publishes. See `autoPublishDecision`.
  *
  * Secrets (OpenRouter key, GitHub token) live in KV, are editable on the
  * Settings page, and are never sent back to the browser — only whether they
@@ -36,12 +40,15 @@ const CATEGORIES = ['ai', 'automation', 'tips', 'maker'];
 // ─── Settings ───────────────────────────────────────────────────────────
 
 async function getSettings(env) {
-  const [key, token, model] = await Promise.all([
+  const [key, token, model, autoApprove] = await Promise.all([
     env.SETTINGS.get('openrouter_key'),
     env.SETTINGS.get('github_token'),
     env.SETTINGS.get('model'),
+    env.SETTINGS.get('auto_approve'),
   ]);
-  return { key, token, model: model || DEFAULT_MODEL };
+  // Read fresh on every run, never cached: switching the toggle off has to
+  // stop the next scheduled publish, not the one after it.
+  return { key, token, model: model || DEFAULT_MODEL, autoApprove: autoApprove === 'on' };
 }
 
 const tail = (s) => (s ? `…${s.slice(-4)}` : null);
@@ -139,23 +146,97 @@ async function recordFailure(env, started, message) {
     .run();
 }
 
+/**
+ * Whether the cron may publish a draft with nobody watching.
+ *
+ * Pure and exported, because this is the only decision in the app that can
+ * put writing on the public site unattended, and it should be provable
+ * without a network or a database.
+ *
+ * A warning holds the draft even with auto-approve on. That is not the
+ * toggle being ignored -- a warning here is not a style note. First-person
+ * language is a fabricated claim of personal experience under your byline;
+ * a near-duplicate is an article competing with one of your own; an unfenced
+ * tag silently eats the example it was meant to show. Those are judgements
+ * you would want to make yourself, and a clean draft needs none of them
+ * made, which is the case the toggle exists for.
+ */
+export function autoPublishDecision({ autoApprove, warnings }) {
+  if (!autoApprove) return { publish: false, why: 'Auto-approve off: waiting for review.' };
+  const w = warnings || [];
+  if (w.length) {
+    return {
+      publish: false,
+      why: `Held for review despite auto-approve — ${w.length} thing${
+        w.length > 1 ? 's' : ''
+      } to check: ${w[0]}`,
+    };
+  }
+  return { publish: true, why: null };
+}
+
+/**
+ * Publish what the cron just drafted, if the toggle is on and the draft is
+ * clean. Only ever reached from `scheduled`: the Generate button is a draft
+ * you asked for, so it waits for you whatever the toggle says.
+ *
+ * Every outcome lands in `runs`, the decision not to publish included. An
+ * unattended publish that leaves no record is one you cannot audit later.
+ */
+async function autoPublish(env, started, result) {
+  const { token, autoApprove } = await getSettings(env);
+  const decision = autoPublishDecision({ autoApprove, warnings: result.warnings });
+
+  const log = (ok, message) =>
+    env.DB.prepare('INSERT INTO runs (started_at, ok, message, draft_id) VALUES (?,?,?,?)')
+      .bind(started, ok ? 1 : 0, String(message).slice(0, 900), result.draftId)
+      .run();
+
+  if (!decision.publish) {
+    // Not a failure: the draft exists and is waiting, which is the system
+    // working. Logged only when the toggle is on, or every run with it off
+    // would carry a line saying nothing happened.
+    if (autoApprove) await log(true, decision.why);
+    return;
+  }
+
+  const d = await env.DB.prepare('SELECT * FROM drafts WHERE id=?').bind(result.draftId).first();
+  try {
+    const r = await publishChecked(env, d, draftMarkdown(d), token);
+    await log(
+      r.ok,
+      r.ok ? `Auto-published "${d.title}" — ${r.commitUrl}` : `Auto-publish refused: ${r.reason}`,
+    );
+  } catch (err) {
+    await log(false, `Auto-publish failed: ${err.message}`);
+  }
+}
+
 // ─── Pages ──────────────────────────────────────────────────────────────
 
 async function queuePage(env, url) {
-  const [{ results: drafts }, { results: counts }, { results: runs }] = await Promise.all([
-    env.DB.prepare(
-      "SELECT id,title,category,summary,warnings,model,created_at,words FROM drafts WHERE status='pending' ORDER BY created_at DESC",
-    ).all(),
-    env.DB.prepare('SELECT status, COUNT(*) n FROM topics GROUP BY status').all(),
-    env.DB.prepare('SELECT ok,message,started_at FROM runs ORDER BY id DESC LIMIT 1').all(),
-  ]);
+  const [{ results: drafts }, { results: counts }, { results: runs }, settings] =
+    await Promise.all([
+      env.DB.prepare(
+        "SELECT id,title,category,summary,warnings,model,created_at,words FROM drafts WHERE status='pending' ORDER BY created_at DESC",
+      ).all(),
+      env.DB.prepare('SELECT status, COUNT(*) n FROM topics GROUP BY status').all(),
+      env.DB.prepare('SELECT ok,message,started_at FROM runs ORDER BY id DESC LIMIT 1').all(),
+      getSettings(env),
+    ]);
 
   const by = Object.fromEntries((counts || []).map((c) => [c.status, c.n]));
   const last = (runs || [])[0];
   const flash = url.searchParams.get('msg');
   const err = url.searchParams.get('err');
 
-  let body = '<h1>Review queue</h1><p class="sub">Drafts wait here. Nothing reaches qivy.in until you publish it.</p>';
+  const auto = settings.autoApprove;
+
+  let body = `<h1>Review queue</h1><p class="sub">${
+    auto
+      ? 'Auto-approve is on: a clean scheduled draft publishes itself. Anything with a warning still waits here.'
+      : 'Drafts wait here. Nothing reaches qivy.in until you publish it.'
+  }</p>`;
 
   if (flash) body += notice('ok', esc(flash));
   if (err) body += notice('warn', `<strong>Failed.</strong> ${esc(err)}`);
@@ -168,7 +249,28 @@ async function queuePage(env, url) {
 
   body += `<form method="POST" action="/generate"><div class="row">
     <button class="primary" type="submit">Generate a draft now</button>
-    <span class="hint">Also runs automatically at 06:00 IST every day.</span>
+    <span class="hint">Also runs automatically at 06:00, 14:00 and 22:00 IST.</span>
+  </div></form>`;
+
+  // Deliberately a form and not a checkbox: a checkbox that posts nothing
+  // when cleared cannot say "off", only "nothing to see here", and off is
+  // the state that has to be unambiguous. The button states what it will do,
+  // and the paragraph states what is true now.
+  body += `<form method="POST" action="/auto-approve"><div class="card">
+    <h3 style="margin:0">Auto-approve ${auto ? 'is ON' : 'is off'}</h3>
+    <p style="color:var(--dim);margin:8px 0 0">${
+      auto
+        ? 'Scheduled drafts publish to qivy.in without waiting for you — but only when ' +
+          'the draft is clean. A draft carrying any warning, an unreachable link, or raw ' +
+          'HTML still stops here, and the runs log says which. The Generate button never ' +
+          'auto-publishes; it is a draft you asked for, so it waits.'
+        : 'Every draft waits for you to read it and press Publish. Turn this on and clean ' +
+          'scheduled drafts will go straight to the site instead.'
+    }</p>
+    <input type="hidden" name="on" value="${auto ? '0' : '1'}">
+    <div class="row"><button class="${auto ? 'danger' : 'primary'}" type="submit">
+      ${auto ? 'Turn auto-approve off' : 'Turn auto-approve on'}
+    </button></div>
   </div></form>`;
 
   if (last) {
@@ -197,12 +299,15 @@ async function queuePage(env, url) {
   return page({ title: 'Queue', body, nav: 'queue' });
 }
 
-async function draftPage(env, id, url) {
-  const d = await env.DB.prepare('SELECT * FROM drafts WHERE id=?').bind(id).first();
-  if (!d) return null;
-
-  const warnings = (d.warnings || '').split('\n').filter(Boolean);
-  const markdown = buildMarkdown(
+/**
+ * The file a draft row would become.
+ *
+ * Shared so the textarea you review and the file auto-approve commits are
+ * built by the same code. Two copies of this would be two definitions of
+ * what the article is.
+ */
+function draftMarkdown(d) {
+  return buildMarkdown(
     {
       title: d.title,
       summary: d.summary,
@@ -214,6 +319,83 @@ async function draftPage(env, id, url) {
     },
     { category: d.category, publishDate: new Date().toISOString().slice(0, 10) },
   );
+}
+
+/**
+ * Commit a draft, unless something about the file itself forbids it.
+ *
+ * Returns `{ ok: false, reason }` instead of throwing, because both callers
+ * need the reason as plain text: the button puts it in a banner, the cron
+ * puts it in the runs table, where it is the only record anyone will see.
+ *
+ * Every refusal in here is mechanical -- a fact about the file, not a matter
+ * of taste. That is what makes it safe to share with the unattended path:
+ * auto-approve skips the reviewer, it does not skip these.
+ */
+async function publishChecked(env, d, markdown, token) {
+  if (!token) return { ok: false, reason: 'No GitHub token set. Add one on the Settings page.' };
+  if (!markdown.trim().startsWith('---')) {
+    return { ok: false, reason: 'The file must start with a --- frontmatter block.' };
+  }
+
+  // Markdown hands raw HTML straight to the page, so an unfenced script tag
+  // here does not show as an example -- it runs, for every reader.
+  const risky = dangerousHtml(markdown);
+  if (risky.length) {
+    return {
+      ok: false,
+      reason:
+        `Not published: this file contains ${risky.join(' and ')} outside a code fence. ` +
+        'Markdown passes raw HTML to the page, so it would run on qivy.in rather than ' +
+        'being shown. Wrap it in a triple-backtick fence, or delete it.',
+    };
+  }
+
+  // The file ships `verification: researched`, which is a promise that the
+  // reader can follow the links. Checked against the markdown passed in, not
+  // the stored row, because that is what gets committed.
+  const { dead } = await checkSources(publishedLinks(markdown));
+  if (dead.length) {
+    const one = dead.length === 1;
+    return {
+      ok: false,
+      reason:
+        `Not published: ${one ? 'a link in this file is' : `${dead.length} links in this file are`} ` +
+        `unreachable — ${dead.join('; ')}. An article marked "researched" is only honest if a ` +
+        `reader can follow its links, so fix or remove ${one ? 'it' : 'them'} and publish again.`,
+    };
+  }
+
+  const commitUrl = await commitFile({
+    token,
+    owner: env.GITHUB_OWNER,
+    repo: env.GITHUB_REPO,
+    branch: env.GITHUB_BRANCH,
+    path: `src/content/articles/${d.slug}.md`,
+    content: markdown,
+    message: `Publish: ${d.title}`,
+  });
+
+  await env.DB.prepare(
+    "UPDATE drafts SET status='published', decided_at=datetime('now'), commit_url=? WHERE id=?",
+  )
+    .bind(commitUrl, d.id)
+    .run();
+  await env.DB.prepare(
+    "UPDATE topics SET status='published', updated_at=datetime('now') WHERE id=?",
+  )
+    .bind(d.topic_id)
+    .run();
+
+  return { ok: true, commitUrl };
+}
+
+async function draftPage(env, id, url) {
+  const d = await env.DB.prepare('SELECT * FROM drafts WHERE id=?').bind(id).first();
+  if (!d) return null;
+
+  const warnings = (d.warnings || '').split('\n').filter(Boolean);
+  const markdown = draftMarkdown(d);
 
   const err = url.searchParams.get('err');
 
@@ -424,6 +606,22 @@ export default {
         return redirect('/settings?msg=Saved.');
       }
 
+      if (method === 'POST' && path === '/auto-approve') {
+        const form = await request.formData();
+        const on = (form.get('on') || '').toString() === '1';
+        // Stored as a word rather than deleted when off, so the log of what
+        // you chose survives either way and getSettings has one thing to
+        // compare against.
+        await env.SETTINGS.put('auto_approve', on ? 'on' : 'off');
+        return redirect(
+          `/?msg=${encodeURIComponent(
+            on
+              ? 'Auto-approve is on. Clean scheduled drafts will publish without waiting for you.'
+              : 'Auto-approve is off. Every draft waits for you again, starting with the next run.',
+          )}`,
+        );
+      }
+
       if (method === 'POST' && path === '/topics') {
         const form = await request.formData();
         const topic = (form.get('topic') || '').toString().trim();
@@ -468,78 +666,10 @@ export default {
           if (!d) return new Response('No such draft.', { status: 404 });
 
           const { token } = await getSettings(env);
-          if (!token) {
-            return redirect(
-              `/draft/${id}?err=${encodeURIComponent('No GitHub token set. Add one on the Settings page.')}`,
-            );
-          }
-          if (!markdown.trim().startsWith('---')) {
-            return redirect(
-              `/draft/${id}?err=${encodeURIComponent('The file must start with a --- frontmatter block.')}`,
-            );
-          }
-
-          // The last gate before the public site. Markdown hands raw HTML
-          // straight to the page, so an unfenced script tag here does not
-          // show as an example -- it runs, for every reader. The validator
-          // only warns about this; by the time someone is pressing Publish
-          // a warning has already been read past once.
-          const risky = dangerousHtml(markdown);
-          if (risky.length) {
-            return redirect(
-              `/draft/${id}?err=${encodeURIComponent(
-                `Not published: this file contains ${risky.join(' and ')} outside a code fence. ` +
-                  'Markdown passes raw HTML to the page, so it would run on qivy.in rather than ' +
-                  'being shown. Wrap it in a triple-backtick fence, or delete it.',
-              )}`,
-            );
-          }
-
-          // The same reasoning one step further out. A dead citation is
-          // already warned about at generation time, but a warning on the
-          // review page is precisely the thing that gets read past -- on the
-          // draft that prompted this gate, it was. The file ships
-          // `verification: researched`, which is a promise that the reader
-          // can follow the links, so an unreachable one refuses the publish
-          // instead of annotating it.
-          //
-          // Checked against the submitted markdown, not the stored row: the
-          // textarea is editable and is what gets committed, so fixing the
-          // link there is what has to make this pass.
-          const { dead } = await checkSources(publishedLinks(markdown));
-          if (dead.length) {
-            const one = dead.length === 1;
-            return redirect(
-              `/draft/${id}?err=${encodeURIComponent(
-                `Not published: ${one ? 'a link in this file is' : `${dead.length} links in this file are`} ` +
-                  `unreachable — ${dead.join('; ')}. An article marked "researched" is only honest if a ` +
-                  `reader can follow its links, so fix or remove ${one ? 'it' : 'them'} above and publish again.`,
-              )}`,
-            );
-          }
 
           try {
-            const commitUrl = await commitFile({
-              token,
-              owner: env.GITHUB_OWNER,
-              repo: env.GITHUB_REPO,
-              branch: env.GITHUB_BRANCH,
-              path: `src/content/articles/${d.slug}.md`,
-              content: markdown,
-              message: `Publish: ${d.title}`,
-            });
-
-            await env.DB.prepare(
-              "UPDATE drafts SET status='published', decided_at=datetime('now'), commit_url=? WHERE id=?",
-            )
-              .bind(commitUrl, id)
-              .run();
-            await env.DB.prepare(
-              "UPDATE topics SET status='published', updated_at=datetime('now') WHERE id=?",
-            )
-              .bind(d.topic_id)
-              .run();
-
+            const r = await publishChecked(env, d, markdown, token);
+            if (!r.ok) return redirect(`/draft/${id}?err=${encodeURIComponent(r.reason)}`);
             return redirect(
               `/?msg=${encodeURIComponent(
                 `Published "${d.title}". The site build is running; it will be live in a couple of minutes.`,
@@ -584,7 +714,9 @@ export default {
   async scheduled(event, env, ctx) {
     const started = new Date().toISOString();
     ctx.waitUntil(
-      generateDraft(env).catch((err) => recordFailure(env, started, err.message)),
+      generateDraft(env)
+        .then((r) => autoPublish(env, started, r))
+        .catch((err) => recordFailure(env, started, err.message)),
     );
   },
 };

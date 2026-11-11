@@ -15,13 +15,41 @@ cron 00:30 / 08:30 / 16:30 UTC  (06:00, 14:00, 22:00 IST)
    ↓  draft it                                 (OpenRouter)
    ↓  validate against the editorial rules     — fails loudly, publishes nothing
    ↓  store the draft                          (D1)
-        … waits for you …
+        … waits for you — unless auto-approve is on
+          and the draft raised no warning at all …
 you press Publish
    ↓  commit the .md to GitHub                 (Contents API)
    ↓  Pages build                              → live on qivy.in
 ```
 
 There is no email. The queue page is the notification.
+
+### Auto-approve
+
+Off until you turn it on, from the button on the queue page. While it is on, a
+scheduled draft commits itself and you read it on the site rather than before
+it. Turn it off and the next run waits for you again — the toggle is read
+fresh on every run, never cached.
+
+What it does **not** skip:
+
+- **Any warning holds the draft.** First-person language, a near-duplicate
+  topic, unfenced tags, a word count outside 150–900. These are not style
+  notes: a first-person claim is fabricated personal experience under your
+  byline, and a near-duplicate competes with your own article. A clean draft
+  needs none of those judgements made, which is the case this toggle is for.
+- **Every refusal in `publishChecked`.** Raw HTML that would run on the page,
+  an unreachable link, missing frontmatter, no GitHub token.
+- **The Generate button.** That draft is one you asked for, so it waits for
+  you whatever the toggle says. Only the cron auto-publishes.
+
+Every outcome is written to `runs`, including a decision *not* to publish, so
+the queue page's "last run" line tells you what happened while you were away.
+An unattended publish that left no record would not be auditable.
+
+The decision itself is `autoPublishDecision` — pure, exported and tested,
+because it is the only thing in the app that can put writing on the public
+site with nobody watching.
 
 ---
 
@@ -269,9 +297,10 @@ Everything here is on a free tier at this volume.
 node studio/test.mjs
 ```
 
-77 checks over duplicate detection, the validator, Markdown generation, the
+84 checks over duplicate detection, the validator, Markdown generation, the
 model fallback chain, source checking, the HTML that Publish refuses, the
-cross-site origin rule, and the Access gate. No framework.
+links it refuses, the auto-approve decision, the cross-site origin rule, and
+the Access gate. No framework.
 
 The Access tests generate a real RS256 key with WebCrypto and serve a real
 JWKS from a stubbed fetch, so the whole verification path runs — signature,

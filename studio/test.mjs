@@ -24,7 +24,7 @@ import {
   dangerousHtml,
   publishedLinks,
 } from './src/pipeline.js';
-import { isSameOrigin, SECURITY_HEADERS } from './src/index.js';
+import { isSameOrigin, SECURITY_HEADERS, autoPublishDecision } from './src/index.js';
 import { requireAccess } from './src/access.js';
 
 let passed = 0;
@@ -464,6 +464,53 @@ await atest('a file whose links all resolve is not blocked', async () => {
     fakeFetch({ 'https://live.test/a': { status: 200 } }),
   );
   assert.deepEqual(dead, []);
+});
+
+console.log('\nPublishing with nobody watching');
+
+// The only decision in the app that can put writing on the public site
+// unattended. Worth more tests than its four lines suggest.
+test('off means off, however clean the draft', () => {
+  const r = autoPublishDecision({ autoApprove: false, warnings: [] });
+  assert.equal(r.publish, false);
+});
+
+test('a clean draft publishes itself when the toggle is on', () => {
+  assert.equal(autoPublishDecision({ autoApprove: true, warnings: [] }).publish, true);
+});
+
+test('a warning holds the draft even with the toggle on', () => {
+  // The case this exists for: a first-person claim is fabricated experience
+  // under the owner's byline, so it must not go out unread.
+  const r = autoPublishDecision({
+    autoApprove: true,
+    warnings: ['First-person language found (I tested). Nothing was actually run.'],
+  });
+  assert.equal(r.publish, false);
+  assert.match(r.why, /despite auto-approve/);
+  assert.match(r.why, /I tested/);
+});
+
+test('the held reason counts the warnings and quotes the first', () => {
+  const r = autoPublishDecision({ autoApprove: true, warnings: ['one', 'two', 'three'] });
+  assert.match(r.why, /3 things to check/);
+  assert.match(r.why, /one$/);
+});
+
+test('one warning is singular', () => {
+  const r = autoPublishDecision({ autoApprove: true, warnings: ['only this'] });
+  assert.match(r.why, /1 thing to check/);
+});
+
+test('off is the reason when it is off, not the warning count', () => {
+  // The runs log reads better saying why nothing happened than listing
+  // warnings on a draft nobody was going to auto-publish anyway.
+  const r = autoPublishDecision({ autoApprove: false, warnings: ['something'] });
+  assert.match(r.why, /Auto-approve off/);
+});
+
+test('a missing warnings list is treated as clean, not as a crash', () => {
+  assert.equal(autoPublishDecision({ autoApprove: true }).publish, true);
 });
 
 test('a slug that normalises to nothing is refused, not committed as .md', () => {
