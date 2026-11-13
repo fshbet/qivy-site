@@ -24,7 +24,12 @@ import {
   dangerousHtml,
   publishedLinks,
 } from './src/pipeline.js';
-import { isSameOrigin, SECURITY_HEADERS, autoPublishDecision } from './src/index.js';
+import {
+  isSameOrigin,
+  SECURITY_HEADERS,
+  autoPublishDecision,
+  holdWarnings,
+} from './src/index.js';
 import { requireAccess } from './src/access.js';
 
 let passed = 0;
@@ -322,9 +327,63 @@ await atest('HEAD refused falls back to GET before calling it dead', async () =>
   assert.deepEqual(r.dead, []);
 });
 
-await atest('an unreachable host is reported honestly, not as a 404', async () => {
+await atest('an unreachable host is unverified, not dead', async () => {
+  // A network error says nothing about the page. It used to be filed under
+  // `dead` while the message said "could not be reached" -- the words were
+  // right and the bucket was wrong, and the bucket is what blocks a publish.
   const r = await checkSources(['https://gone.test/x'], fakeFetch({ 'https://gone.test/x': 'boom' }));
-  assert.match(r.dead[0], /could not be reached/);
+  assert.deepEqual(r.dead, []);
+  assert.match(r.unverified[0], /could not be reached/);
+});
+
+await atest('a 404 is dead, and that still refuses a publish', async () => {
+  const r = await checkSources(['https://gone.test/x'], fakeFetch({ 'https://gone.test/x': { status: 404 } }));
+  assert.equal(r.dead.length, 1);
+  assert.deepEqual(r.unverified, []);
+  assert.equal(r.allDead, true);
+});
+
+await atest('a 410 is dead too', async () => {
+  const r = await checkSources(['https://gone.test/x'], fakeFetch({ 'https://gone.test/x': { status: 410 } }));
+  assert.equal(r.dead.length, 1);
+});
+
+await atest('a 403 to both HEAD and GET is unverified, not dead', async () => {
+  // The real case: platform.openai.com answers 403 to both and opens fine in
+  // a browser. Calling that dead threw away a draft on 12 November.
+  const impl = async () => ({ status: 403, url: 'https://picky.test/doc' });
+  const r = await checkSources(['https://picky.test/doc'], impl);
+  assert.deepEqual(r.dead, []);
+  assert.equal(r.unverified.length, 1);
+  assert.equal(r.allDead, false);
+  assert.equal(r.allUnverified, true);
+});
+
+await atest('a 500 is unverified — a site being broken today is not a dead page', async () => {
+  const r = await checkSources(['https://oops.test/x'], fakeFetch({ 'https://oops.test/x': { status: 500 } }));
+  assert.deepEqual(r.dead, []);
+  assert.equal(r.unverified.length, 1);
+});
+
+await atest('every source unverified says so, because then nothing was checked', async () => {
+  const r = await checkSources(
+    ['https://a.test/x', 'https://b.test/y'],
+    fakeFetch({ 'https://a.test/x': { status: 403 }, 'https://b.test/y': 'boom' }),
+  );
+  assert.equal(r.allUnverified, true);
+  const w = r.warnings.find((x) => x.startsWith('Could not verify'));
+  assert.match(w, /any source/);
+  assert.match(w, /nobody has followed|citation anyone has followed/);
+});
+
+await atest('one shaky source among two does not claim nothing was checked', async () => {
+  const r = await checkSources(
+    ['https://a.test/x', 'https://b.test/y'],
+    fakeFetch({ 'https://a.test/x': { status: 403 }, 'https://b.test/y': { status: 200 } }),
+  );
+  assert.equal(r.allUnverified, false);
+  const w = r.warnings.find((x) => x.startsWith('Could not verify'));
+  assert.doesNotMatch(w, /any source/);
 });
 
 console.log('\nMarkdown');
@@ -470,13 +529,59 @@ console.log('\nPublishing with nobody watching');
 
 // The only decision in the app that can put writing on the public site
 // unattended. Worth more tests than its four lines suggest.
+await atest('a redirect note alone does not hold the draft', async () => {
+  // The bug this fixes: four runs, four holds, three of them stopped by a
+  // note whose own text says the link works today.
+  const checked = await checkSources(
+    ['https://old.test/doc'],
+    fakeFetch({ 'https://old.test/doc': { status: 200, url: 'https://new.test/doc' } }),
+  );
+  assert.ok(checked.moved.length, 'expected a redirect');
+  const hold = holdWarnings([], checked);
+  assert.deepEqual(hold, []);
+  assert.equal(autoPublishDecision({ autoApprove: true, hold }).publish, true);
+});
+
+await atest('one source that refused us does not hold the draft either', async () => {
+  const checked = await checkSources(
+    ['https://picky.test/a', 'https://fine.test/b'],
+    fakeFetch({ 'https://picky.test/a': { status: 403 }, 'https://fine.test/b': { status: 200 } }),
+  );
+  const hold = holdWarnings([], checked);
+  assert.deepEqual(hold, []);
+  assert.equal(autoPublishDecision({ autoApprove: true, hold }).publish, true);
+});
+
+await atest('every source unverified DOES hold the draft', async () => {
+  const checked = await checkSources(
+    ['https://picky.test/a'],
+    fakeFetch({ 'https://picky.test/a': { status: 403 } }),
+  );
+  const hold = holdWarnings([], checked);
+  assert.equal(hold.length, 1);
+  assert.equal(autoPublishDecision({ autoApprove: true, hold }).publish, false);
+});
+
+test('a validator warning always holds, whatever the sources did', () => {
+  const hold = holdWarnings(['First-person language found (I tested).'], {
+    allUnverified: false,
+    warnings: [],
+  });
+  assert.equal(hold.length, 1);
+  assert.equal(autoPublishDecision({ autoApprove: true, hold }).publish, false);
+});
+
+test('holdWarnings survives a draft with no warnings and no check', () => {
+  assert.deepEqual(holdWarnings(undefined, undefined), []);
+});
+
 test('off means off, however clean the draft', () => {
-  const r = autoPublishDecision({ autoApprove: false, warnings: [] });
+  const r = autoPublishDecision({ autoApprove: false, hold: [] });
   assert.equal(r.publish, false);
 });
 
 test('a clean draft publishes itself when the toggle is on', () => {
-  assert.equal(autoPublishDecision({ autoApprove: true, warnings: [] }).publish, true);
+  assert.equal(autoPublishDecision({ autoApprove: true, hold: [] }).publish, true);
 });
 
 test('a warning holds the draft even with the toggle on', () => {
@@ -484,7 +589,7 @@ test('a warning holds the draft even with the toggle on', () => {
   // under the owner's byline, so it must not go out unread.
   const r = autoPublishDecision({
     autoApprove: true,
-    warnings: ['First-person language found (I tested). Nothing was actually run.'],
+    hold: ['First-person language found (I tested). Nothing was actually run.'],
   });
   assert.equal(r.publish, false);
   assert.match(r.why, /despite auto-approve/);
@@ -492,20 +597,20 @@ test('a warning holds the draft even with the toggle on', () => {
 });
 
 test('the held reason counts the warnings and quotes the first', () => {
-  const r = autoPublishDecision({ autoApprove: true, warnings: ['one', 'two', 'three'] });
+  const r = autoPublishDecision({ autoApprove: true, hold: ['one', 'two', 'three'] });
   assert.match(r.why, /3 things to check/);
   assert.match(r.why, /one$/);
 });
 
 test('one warning is singular', () => {
-  const r = autoPublishDecision({ autoApprove: true, warnings: ['only this'] });
+  const r = autoPublishDecision({ autoApprove: true, hold: ['only this'] });
   assert.match(r.why, /1 thing to check/);
 });
 
 test('off is the reason when it is off, not the warning count', () => {
   // The runs log reads better saying why nothing happened than listing
   // warnings on a draft nobody was going to auto-publish anyway.
-  const r = autoPublishDecision({ autoApprove: false, warnings: ['something'] });
+  const r = autoPublishDecision({ autoApprove: false, hold: ['something'] });
   assert.match(r.why, /Auto-approve off/);
 });
 

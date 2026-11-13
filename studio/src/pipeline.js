@@ -76,9 +76,19 @@ export const SYSTEM_PROMPT = [
 
 export const DEFAULT_MODEL = 'google/gemma-4-31b-it:free';
 
-// One call a day, so a slow answer is fine and a hung one is not. 60s is
-// well past any normal free-tier queue and well inside a Worker's life.
-const MODEL_TIMEOUT_MS = 60_000;
+// A slow answer is fine; a hung one is not. 60s was the first guess and it
+// was wrong: it sat in the middle of the real distribution rather than past
+// it. Nine successful runs took, end to end (model call plus source checks),
+//
+//   40  40  44  49  51  52  56  57  60   seconds
+//
+// against a 60s cap -- so the fastest four had room and the rest were racing
+// it. Four of thirteen runs died on "aborted due to timeout", which is the
+// same distribution with a cliff through the middle of it, not a separate
+// fault. 150s puts the cliff well outside it. Cron invocations get minutes
+// of wall time, and waiting on a fetch costs no CPU, so the only thing a
+// longer wait spends is time nobody is watching.
+const MODEL_TIMEOUT_MS = 150_000;
 
 // Eight of these at most, once a day. Short: a slow doc site is not a
 // reason to fail a run, only a reason to say the link was unreachable.
@@ -212,6 +222,7 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
   // `runs` at all. A failure you cannot see is worse than a slow one: you
   // get a spinner and an empty history with no reason in it.
   let res;
+  let text;
   try {
     res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
@@ -244,6 +255,14 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
         ],
       }),
     });
+    // Read inside the same try, deliberately. The abort signal covers the
+    // whole exchange, not just the headers, and OpenRouter sends headers
+    // early -- so a slow generation aborts here, at the body, long after the
+    // fetch itself resolved. With this line outside the catch the DOMException
+    // escaped raw and the runs log read "The operation was aborted due to
+    // timeout", which named the symptom and hid both the cause and the
+    // sentence below that says what to do about it.
+    text = await res.text();
   } catch (err) {
     if (err.name === 'TimeoutError' || err.name === 'AbortError') {
       throw new Error(
@@ -255,7 +274,6 @@ export async function callModel({ apiKey, model, topic, category, existingTitles
     throw new Error(`Could not reach OpenRouter: ${err.message}`);
   }
 
-  const text = await res.text();
   if (!res.ok) {
     // Surface the provider's own words — "401 User not found" and
     // "402 negative balance" need different fixes and a generic message
@@ -494,8 +512,23 @@ export function publishedLinks(markdown) {
 // Redirects are reported rather than treated as faults. Vendors move docs
 // constantly, and the old URL usually still works — but the canonical one
 // is what belongs in a published article.
+//
+// Three outcomes, not two, and the split is the whole point:
+//
+//   dead        404 or 410. The page is gone, and the question this check
+//               exists to answer is settled: no reader can follow it.
+//   unverified  Any other failure -- 401, 403, 429, a 5xx, a timeout, a DNS
+//               error. The server either refused *us* or said nothing. That
+//               is not evidence about the page. OpenAI's help centre and its
+//               API reference both answer 403 to HEAD and to GET while
+//               opening perfectly in a browser, and treating that as dead
+//               threw away a whole draft on 12 November and blocked another.
+//   moved       Resolved somewhere else. Worth tidying, nothing more.
+//
+// Only `dead` refuses a publish. The other two are things to tell a human.
 export async function checkSources(sources, impl = fetch) {
   const dead = [];
+  const unverified = [];
   const moved = [];
 
   await Promise.all(
@@ -515,8 +548,14 @@ export async function checkSources(sources, impl = fetch) {
             signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS),
           });
         }
-        if (res.status >= 400) {
+        if (res.status === 404 || res.status === 410) {
           dead.push(`${url} (HTTP ${res.status})`);
+        } else if (res.status >= 400) {
+          // Still worth saying out loud. Some servers answer 403 for a path
+          // that does not exist, so this can be a wrong citation wearing bot
+          // protection as a disguise -- which is exactly why it reaches you
+          // as a warning instead of being waved through silently.
+          unverified.push(`${url} (HTTP ${res.status})`);
         } else if (res.url && res.url !== url.split('#')[0]) {
           // Compared without the fragment: Response.url never carries one, so
           // every anchored citation would otherwise look like a redirect to
@@ -524,9 +563,10 @@ export async function checkSources(sources, impl = fetch) {
           moved.push(`${url} -> ${res.url}`);
         }
       } catch (err) {
-        // A network error is not proof the page is gone, so say so plainly
-        // rather than declaring it dead.
-        dead.push(`${url} (could not be reached: ${err.name || err.message})`);
+        // A network error is not proof the page is gone. It never was: this
+        // used to be filed under `dead` while saying "could not be reached",
+        // and the wording was right where the bucket was wrong.
+        unverified.push(`${url} (could not be reached: ${err.name || err.message})`);
       }
     }),
   );
@@ -539,13 +579,34 @@ export async function checkSources(sources, impl = fetch) {
         'can follow the citation. Replace or remove it before publishing.',
     );
   }
+  if (unverified.length) {
+    const every = unverified.length === sources.length;
+    warnings.push(
+      `Could not verify ${every ? 'any source' : `source${unverified.length > 1 ? 's' : ''}`}: ` +
+        `${unverified.join('; ')}. The page may be perfectly fine and simply refusing ` +
+        'automated requests, which is common on vendor help centres — but nothing here ' +
+        `has checked it, so open ${unverified.length > 1 ? 'each one' : 'it'} yourself.` +
+        (every ? ' Nothing in this article has a citation anyone has followed.' : ''),
+    );
+  }
   if (moved.length) {
     warnings.push(
       `Source redirects, so the canonical URL differs: ${moved.join('; ')}. ` +
         'Worth updating — the current link works today and may not next year.',
     );
   }
-  return { dead, moved, warnings, allDead: sources.length > 0 && dead.length === sources.length };
+  return {
+    dead,
+    unverified,
+    moved,
+    warnings,
+    // Still only about `dead`: all sources 404 means the article cites
+    // nothing that exists, which is worth refusing to store at all. All
+    // sources merely unverified is a different thing -- a human can still
+    // open them -- so that holds the draft for review instead of binning it.
+    allDead: sources.length > 0 && dead.length === sources.length,
+    allUnverified: sources.length > 0 && unverified.length === sources.length,
+  };
 }
 
 // ─── Markdown ───────────────────────────────────────────────────────────

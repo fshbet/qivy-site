@@ -33,15 +33,25 @@ fresh on every run, never cached.
 
 What it does **not** skip:
 
-- **Any warning holds the draft.** First-person language, a near-duplicate
-  topic, unfenced tags, a word count outside 150–900. These are not style
-  notes: a first-person claim is fabricated personal experience under your
-  byline, and a near-duplicate competes with your own article. A clean draft
-  needs none of those judgements made, which is the case this toggle is for.
-- **Every refusal in `publishChecked`.** Raw HTML that would run on the page,
-  an unreachable link, missing frontmatter, no GitHub token.
+- **Every validator warning holds the draft.** First-person language, a
+  near-duplicate topic, unfenced tags, a word count outside 150–900. These are
+  not style notes: a first-person claim is fabricated personal experience under
+  your byline, and a near-duplicate competes with your own article. A clean
+  draft needs none of those judgements made, which is the case this toggle is
+  for.
+- **Every source unverified holds it too.** One shaky citation among several
+  still leaves the article standing on ones that were followed. None does not.
+- **Every refusal in `publishChecked`.** Raw HTML that would run on the page, a
+  dead (404/410) link, missing frontmatter, no GitHub token.
 - **The Generate button.** That draft is one you asked for, so it waits for
   you whatever the toggle says. Only the cron auto-publishes.
+
+What it does **not** hold for, and why that had to change: a redirect note, and
+a single source that refused an automated check. The first version held on
+*any* warning. The result, measured over the first four scheduled runs after it
+shipped, was four drafts and four holds — three of them stopped by a note whose
+own text says the link works today. A gate that never opens is not a cautious
+gate, it is a broken one. `holdWarnings` is where that line is drawn.
 
 Every outcome is written to `runs`, including a decision *not* to publish, so
 the queue page's "last run" line tells you what happened while you were away.
@@ -258,13 +268,22 @@ override flag, deliberately.
   experience under your byline.
 - A draft with **no source URL throws**. "Researched" without a source is
   unverifiable.
-- **Every cited URL is followed before the draft is stored.** The validator
-  can only prove a source is shaped like a URL; a model will cite the right
-  vendor on a plausible, dead path. All of them dead throws at drafting time,
-  because then there is nothing a reader can check; a 404 among several is a
-  warning naming it, and then **a refusal at the Publish button** — see
-  "What Publish refuses to commit". A redirect is reported with the canonical
-  URL rather than treated as a fault — vendors move docs constantly.
+- **Every cited URL is followed before the draft is stored,** and the answer
+  lands in one of three buckets. The validator can only prove a source is
+  shaped like a URL; a model will cite the right vendor on a plausible, dead
+  path.
+  - **dead** — 404 or 410. The page is gone and no reader can follow it. One
+    among several is a warning and then **a refusal at the Publish button**;
+    all of them dead throws at drafting time, because then the article cites
+    nothing that exists.
+  - **unverified** — 401, 403, 429, a 5xx, a timeout, a DNS error. The server
+    refused *us*, or said nothing. That is not evidence about the page:
+    OpenAI's help centre and its API reference both answer 403 to HEAD and to
+    GET while opening fine in a browser. This warns, and never refuses. It
+    used to count as dead, which threw away a whole draft on 12 November and
+    blocked another from publishing.
+  - **moved** — reported with the canonical URL rather than treated as a
+    fault. Vendors move docs constantly.
 - First-person language (`I tested`, `in my experience`) is detected and
   shown as a warning on the draft page for you to rewrite.
 - Word count, metaDescription length and slug are checked against the site's
@@ -297,7 +316,7 @@ Everything here is on a free tier at this volume.
 node studio/test.mjs
 ```
 
-84 checks over duplicate detection, the validator, Markdown generation, the
+95 checks over duplicate detection, the validator, Markdown generation, the
 model fallback chain, source checking, the HTML that Publish refuses, the
 links it refuses, the auto-approve decision, the cross-site origin rule, and
 the Access gate. No framework.

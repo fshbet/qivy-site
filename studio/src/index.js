@@ -53,6 +53,38 @@ async function getSettings(env) {
 
 const tail = (s) => (s ? `…${s.slice(-4)}` : null);
 
+/**
+ * Of everything wrong with a draft, the part that needs a person.
+ *
+ * Pure and exported so the line between "stop" and "mention" is testable
+ * without a network or a database. Together with `autoPublishDecision` this
+ * is the whole of what lets writing reach the public site unread.
+ *
+ * Stops: every validator warning. Fabricated first-hand experience, a
+ * near-duplicate of your own article, an unfenced tag that eats its own
+ * example, a length outside the house rules. Judgement calls, all of them.
+ *
+ * Mentions only: a redirect, and a source that refused an automated check.
+ * Neither makes the article dishonest -- the link works, or very likely does
+ * -- and holding on them is what made auto-approve publish nothing in four
+ * runs.
+ *
+ * The exception is every source unverified. One shaky citation among several
+ * still leaves the article standing on ones that were followed; none does
+ * not, and nobody should find that out from the live site.
+ *
+ * `dead` appears nowhere here: publishChecked refuses it outright, and the
+ * refusal is written to the runs log, so it needs no help from this.
+ */
+export function holdWarnings(draftWarnings, checked) {
+  const hold = [...(draftWarnings || [])];
+  if (checked && checked.allUnverified) {
+    const w = (checked.warnings || []).find((x) => x.startsWith('Could not verify'));
+    if (w) hold.push(w);
+  }
+  return hold;
+}
+
 // ─── Core job ───────────────────────────────────────────────────────────
 
 /** Draft one article. Used by both the cron and the Generate button. */
@@ -91,11 +123,13 @@ async function generateDraft(env) {
   const checked = await checkSources(draft.sources);
   if (checked.allDead) {
     throw new Error(
-      `Every cited source is dead or unreachable: ${checked.dead.join('; ')}. ` +
+      `Every cited source is dead: ${checked.dead.join('; ')}. ` +
         'An article marked "researched" with nothing a reader can follow is ' +
         'unverifiable, so no draft was stored.',
     );
   }
+
+  const hold = holdWarnings(draft.warnings, checked);
   draft.warnings.push(...checked.warnings);
 
   const inserted = await env.DB.prepare(
@@ -137,7 +171,10 @@ async function generateDraft(env) {
     .bind(started, `Drafted "${draft.title}" (${draft.words} words)`, draftId)
     .run();
 
-  return { draftId, title: draft.title, warnings: draft.warnings };
+  // `warnings` is everything, for the review page and the log. `hold` is the
+  // subset that may stop an unattended publish. Keeping both means the page
+  // still shows a redirect note it no longer blocks on.
+  return { draftId, title: draft.title, warnings: draft.warnings, hold };
 }
 
 async function recordFailure(env, started, message) {
@@ -153,17 +190,24 @@ async function recordFailure(env, started, message) {
  * put writing on the public site unattended, and it should be provable
  * without a network or a database.
  *
- * A warning holds the draft even with auto-approve on. That is not the
- * toggle being ignored -- a warning here is not a style note. First-person
- * language is a fabricated claim of personal experience under your byline;
- * a near-duplicate is an article competing with one of your own; an unfenced
- * tag silently eats the example it was meant to show. Those are judgements
- * you would want to make yourself, and a clean draft needs none of them
- * made, which is the case the toggle exists for.
+ * `hold` is NOT every warning on the draft -- it is the subset that needs a
+ * person. First-person language is a fabricated claim of personal experience
+ * under your byline; a near-duplicate competes with one of your own
+ * articles; an unfenced tag silently eats the example it was meant to show;
+ * and a source nothing could verify leaves the article standing on a
+ * citation nobody has followed. Those are judgements you would want to make
+ * yourself.
+ *
+ * What is deliberately absent: a redirect note, and a single shaky source
+ * among several. The first version of this held on *any* warning, and the
+ * result was an auto-approve that published nothing in four runs -- three of
+ * them stopped by a note whose own text says the link works today. A gate
+ * that never opens is not a cautious gate, it is a broken one. `generateDraft`
+ * decides what belongs in here; see the comment there.
  */
-export function autoPublishDecision({ autoApprove, warnings }) {
+export function autoPublishDecision({ autoApprove, hold }) {
   if (!autoApprove) return { publish: false, why: 'Auto-approve off: waiting for review.' };
-  const w = warnings || [];
+  const w = (hold || []).filter(Boolean);
   if (w.length) {
     return {
       publish: false,
@@ -185,7 +229,7 @@ export function autoPublishDecision({ autoApprove, warnings }) {
  */
 async function autoPublish(env, started, result) {
   const { token, autoApprove } = await getSettings(env);
-  const decision = autoPublishDecision({ autoApprove, warnings: result.warnings });
+  const decision = autoPublishDecision({ autoApprove, hold: result.hold });
 
   const log = (ok, message) =>
     env.DB.prepare('INSERT INTO runs (started_at, ok, message, draft_id) VALUES (?,?,?,?)')
