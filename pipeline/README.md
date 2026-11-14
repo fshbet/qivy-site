@@ -16,23 +16,37 @@ this repository, so there is no database to keep in step with it.
 
 ## What you have to do once
 
-Two repository secrets. Without the first, every run falls back to OpenRouter;
-without the second, a run where Claude fails produces nothing at all.
+The GitHub App, then two secrets. A token on its own is not enough — the first
+run of this workflow failed with *"Claude Code is not installed on this
+repository"*, because the action authenticates as the Claude GitHub App and
+the token only says who it is acting for.
 
-**1. `CLAUDE_CODE_OAUTH_TOKEN`** — this is what makes Claude the writer on your
-existing subscription, with no API key and no per-token billing. Run this on
-your own machine, signed in to Claude Code:
+**1. The app and the token together.** From a terminal in this repository,
+signed in to Claude Code and with `gh auth login` done:
 
 ```bash
-claude setup-token
+claude
 ```
 
-Then paste the output into **Settings → Secrets and variables → Actions → New
-repository secret**, named `CLAUDE_CODE_OAUTH_TOKEN`. The token is tied to
-whoever ran the command, so it has to be you.
+Then type `/install-github-app`. It installs the app, stores
+`CLAUDE_CODE_OAUTH_TOKEN` as a repository secret for you, and offers to add
+workflow files — **choose "Skip for now"** for that last part, since
+`articles.yml` already exists and you do not want it overwritten. Needs repo
+admin, and the token is tied to whoever runs it, so it has to be you.
+
+The manual route is <https://github.com/apps/claude> to install the app, then
+`claude setup-token` and paste the result into **Settings → Secrets and
+variables → Actions**. `gh secret set CLAUDE_CODE_OAUTH_TOKEN` prompts for the
+value instead of putting it in your shell history.
 
 **2. `OPENROUTER_API_KEY`** — the fallback writer, the same key the Studio
-dashboard uses. From <https://openrouter.ai/keys>.
+dashboard uses. From <https://openrouter.ai/keys>. Without it, a run where
+Claude fails produces nothing at all.
+
+One thing to know about the schedule: GitHub runs scheduled workflows only
+from the default branch, and on a **public** repository it disables the
+schedule after 60 days with no repository activity. This one commits daily, so
+that clock never runs down — but it is why a long quiet spell would stop it.
 
 ## The directories
 
