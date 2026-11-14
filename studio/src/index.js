@@ -382,17 +382,45 @@ async function publishChecked(env, d, markdown, token) {
     return { ok: false, reason: 'The file must start with a --- frontmatter block.' };
   }
 
+  // Claim the row before anything touches GitHub, and do it here rather than
+  // in the route so the unattended path gets the same guard. There is no
+  // script on the page to disable the button with -- the CSP forbids one --
+  // so two clicks, or one double-tap on a phone, used to start two commits
+  // racing on the same blob SHA, and the loser came back as a raw 409. The
+  // conditional UPDATE is the whole guard: it also stops a draft being
+  // published twice, and stops the cron and a reviewer publishing at once.
+  const claim = await env.DB.prepare(
+    "UPDATE drafts SET status='publishing' WHERE id=? AND status='pending'",
+  )
+    .bind(d.id)
+    .run();
+  if (!claim.meta.changes) {
+    return {
+      ok: false,
+      reason:
+        `This draft is not waiting for a decision (it is "${d.status}"), so nothing was ` +
+        'published. Reload the queue to see where it got to.',
+    };
+  }
+  // Put the row back on any refusal below, or a draft that failed to publish
+  // would vanish from the queue -- which lists `pending` -- and be
+  // unreachable from the dashboard.
+  const refuse = async (reason) => {
+    await env.DB.prepare("UPDATE drafts SET status='pending' WHERE id=? AND status='publishing'")
+      .bind(d.id)
+      .run();
+    return { ok: false, reason };
+  };
+
   // Markdown hands raw HTML straight to the page, so an unfenced script tag
   // here does not show as an example -- it runs, for every reader.
   const risky = dangerousHtml(markdown);
   if (risky.length) {
-    return {
-      ok: false,
-      reason:
-        `Not published: this file contains ${risky.join(' and ')} outside a code fence. ` +
+    return refuse(
+      `Not published: this file contains ${risky.join(' and ')} outside a code fence. ` +
         'Markdown passes raw HTML to the page, so it would run on qivy.in rather than ' +
         'being shown. Wrap it in a triple-backtick fence, or delete it.',
-    };
+    );
   }
 
   // The file ships `verification: researched`, which is a promise that the
@@ -401,24 +429,32 @@ async function publishChecked(env, d, markdown, token) {
   const { dead } = await checkSources(publishedLinks(markdown));
   if (dead.length) {
     const one = dead.length === 1;
-    return {
-      ok: false,
-      reason:
-        `Not published: ${one ? 'a link in this file is' : `${dead.length} links in this file are`} ` +
+    return refuse(
+      `Not published: ${one ? 'a link in this file is' : `${dead.length} links in this file are`} ` +
         `unreachable — ${dead.join('; ')}. An article marked "researched" is only honest if a ` +
         `reader can follow its links, so fix or remove ${one ? 'it' : 'them'} and publish again.`,
-    };
+    );
   }
 
-  const commitUrl = await commitFile({
-    token,
-    owner: env.GITHUB_OWNER,
-    repo: env.GITHUB_REPO,
-    branch: env.GITHUB_BRANCH,
-    path: `src/content/articles/${d.slug}.md`,
-    content: markdown,
-    message: `Publish: ${d.title}`,
-  });
+  // commitFile refuses an existing path rather than overwriting a live
+  // article, and that refusal arrives as an exception. Catching it here is
+  // what puts the draft back in the queue instead of stranding it as
+  // 'publishing' -- and the reviewer can act on the reason, which is that
+  // the slug is taken.
+  let commitUrl;
+  try {
+    commitUrl = await commitFile({
+      token,
+      owner: env.GITHUB_OWNER,
+      repo: env.GITHUB_REPO,
+      branch: env.GITHUB_BRANCH,
+      path: `src/content/articles/${d.slug}.md`,
+      content: markdown,
+      message: `Publish: ${d.title}`,
+    });
+  } catch (err) {
+    return refuse(err.message);
+  }
 
   await env.DB.prepare(
     "UPDATE drafts SET status='published', decided_at=datetime('now'), commit_url=? WHERE id=?",
@@ -712,6 +748,8 @@ export default {
           const { token } = await getSettings(env);
 
           try {
+            // publishChecked owns the double-click guard and puts the draft
+            // back on every refusal, so there is nothing to undo here.
             const r = await publishChecked(env, d, markdown, token);
             if (!r.ok) return redirect(`/draft/${id}?err=${encodeURIComponent(r.reason)}`);
             return redirect(
@@ -724,6 +762,11 @@ export default {
             // the one worth the most later, since it is the step that
             // touches the repository, and a redirect banner is gone the
             // moment you navigate away.
+            await env.DB.prepare(
+              "UPDATE drafts SET status='pending' WHERE id=? AND status='publishing'",
+            )
+              .bind(id)
+              .run();
             await recordFailure(env, startedPublish, `Publish failed: ${err.message}`);
             return redirect(`/draft/${id}?err=${encodeURIComponent(err.message)}`);
           }
@@ -731,11 +774,17 @@ export default {
 
         if (method === 'POST' && action === '/reject') {
           const d = await env.DB.prepare('SELECT topic_id FROM drafts WHERE id=?').bind(id).first();
-          await env.DB.prepare(
-            "UPDATE drafts SET status='rejected', decided_at=datetime('now') WHERE id=?",
+          // Only a pending draft can be rejected, for the same reason only a
+          // pending one can be published: rejecting one mid-publish would
+          // race the commit and the last write would win.
+          const rejected = await env.DB.prepare(
+            "UPDATE drafts SET status='rejected', decided_at=datetime('now') WHERE id=? AND status='pending'",
           )
             .bind(id)
             .run();
+          if (!rejected.meta.changes) {
+            return redirect('/?msg=That draft is no longer waiting for a decision.');
+          }
           // Back to 'idea', not 'rejected': a bad draft is usually a bad
           // generation, not a bad topic, so it stays available to retry.
           if (d?.topic_id) {

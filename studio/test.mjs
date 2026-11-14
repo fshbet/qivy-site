@@ -23,6 +23,7 @@ import {
   checkSources,
   dangerousHtml,
   publishedLinks,
+  commitFile,
 } from './src/pipeline.js';
 import {
   isSameOrigin,
@@ -823,6 +824,143 @@ await atest('a token signed by an unknown key is refused', async () => {
   const r = await requireAccess(asRequest(await token({}, { kid: 'key-does-not-exist' })), envOk);
   assert.equal(r.ok, false);
   assert.equal(r.status, 401);
+});
+
+// ─── What a QA pass found, kept as checks ───────────────────────────────
+// Every one of these failed before the fix beside it. They are grouped
+// because they share a shape: the thing that caught the problem was the SITE
+// BUILD or a human reading a queue, both of them hours too late.
+
+console.log('\nThe gaps a QA pass found');
+
+test('a one-character tag is dropped, because the schema needs two', () => {
+  // content.config.ts: tags: z.array(z.string().min(2)). A model writing
+  // about C tags it "c", and that used to fail the Pages build instead of
+  // the draft -- taking every later article down with it.
+  const d = validateDraft(JSON.stringify({ ...good, tags: ['C', 'local models', 'x'] }), opts);
+  assert.deepEqual(d.tags, ['local-models']);
+});
+
+test('a tag list that is entirely unusable falls back to the category', () => {
+  const d = validateDraft(JSON.stringify({ ...good, tags: ['c', 'x'] }), opts);
+  assert.deepEqual(d.tags, ['ai']);
+});
+
+test('tags are quoted, so a tag of "true" stays a string', () => {
+  // Unquoted, YAML reads `- true` as a boolean and the schema rejects it.
+  const d = validateDraft(JSON.stringify({ ...good, tags: ['true', 'no'] }), opts);
+  const md = buildMarkdown(d, { category: 'ai', publishDate: '2026-11-14' });
+  assert.match(md, /^ {2}- 'true'$/m);
+  assert.doesNotMatch(md, /^ {2}- true$/m);
+});
+
+test('a loop variable is not a claim of personal experience', () => {
+  // Measured on a real draft: the body matched ["i "] and the warning read
+  // "First-person language found (i)". holdWarnings treats a warning as
+  // needing a person, so every article with a Python loop was diverted to
+  // needs-review/ and never published.
+  const body =
+    'Print each row so you can see what you have.\n\n```python\nfor i in range(10):\n    print(i)\n```\n\n' +
+    '## Expected result\n\nTen lines of numbers.';
+  const d = validateDraft(JSON.stringify({ ...good, body }), opts);
+  assert.deepEqual(
+    d.warnings.filter((w) => /first-person/i.test(w)),
+    [],
+  );
+});
+
+test('first-person prose is still caught', () => {
+  const d = validateDraft(
+    JSON.stringify({ ...good, body: 'I ran this for three months and it never crashed.' }),
+    opts,
+  );
+  assert.ok(d.warnings.some((w) => /first-person/i.test(w)));
+});
+
+test('"in my experience" is caught wherever it sits in a sentence', () => {
+  const d = validateDraft(
+    JSON.stringify({ ...good, body: 'The flag is slow, and in my experience it always was.' }),
+    opts,
+  );
+  assert.ok(d.warnings.some((w) => /first-person/i.test(w)));
+});
+
+await atest('commitFile refuses to overwrite a live article', async () => {
+  // The slug comes from a model, so two articles on neighbouring topics
+  // produce one filename. This used to fetch the existing blob SHA and PUT
+  // straight over it: a silent rewrite of a published page.
+  let put = false;
+  const impl = async (url, init) => {
+    if (init?.method === 'PUT') {
+      put = true;
+      return { ok: true, json: async () => ({ commit: { html_url: 'x' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ sha: 'abc123' }) };
+  };
+  await assert.rejects(
+    () =>
+      commitFile(
+        {
+          token: 't',
+          owner: 'o',
+          repo: 'r',
+          branch: 'main',
+          path: 'src/content/articles/taken.md',
+          content: '---\n---\n',
+          message: 'm',
+        },
+        impl,
+      ),
+    /already exists/,
+  );
+  assert.equal(put, false, 'nothing may be written when the path is taken');
+});
+
+await atest('commitFile writes when the path is free', async () => {
+  const impl = async (url, init) => {
+    if (init?.method === 'PUT') {
+      return { ok: true, json: async () => ({ commit: { html_url: 'https://c.test/1' } }) };
+    }
+    return { ok: false, status: 404, text: async () => 'Not Found' };
+  };
+  const out = await commitFile(
+    {
+      token: 't',
+      owner: 'o',
+      repo: 'r',
+      branch: 'main',
+      path: 'src/content/articles/free.md',
+      content: '---\n---\n',
+      message: 'm',
+    },
+    impl,
+  );
+  assert.equal(out, 'https://c.test/1');
+});
+
+await atest('commitFile overwrites only when asked', async () => {
+  let sentSha = null;
+  const impl = async (url, init) => {
+    if (init?.method === 'PUT') {
+      sentSha = JSON.parse(init.body).sha;
+      return { ok: true, json: async () => ({ commit: { html_url: 'https://c.test/2' } }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ sha: 'abc123' }) };
+  };
+  await commitFile(
+    {
+      token: 't',
+      owner: 'o',
+      repo: 'r',
+      branch: 'main',
+      path: 'src/content/articles/taken.md',
+      content: '---\n---\n',
+      message: 'm',
+      overwrite: true,
+    },
+    impl,
+  );
+  assert.equal(sentSha, 'abc123', 'an overwrite has to carry the existing blob SHA');
 });
 
 console.log(`\n${passed} checks passed${process.exitCode ? ' — with failures above' : ''}.\n`);

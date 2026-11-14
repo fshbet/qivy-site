@@ -76,6 +76,9 @@ const main = async () => {
 
   const written = [];
   const failed = [];
+  // Topics that failed for a reason that says nothing about the topic. They
+  // are taken out of play for THIS run and put back in the file afterwards.
+  const keepQueued = new Set();
 
   for (let i = 0; i < count; i += 1) {
     const picked = pickTopic(rows);
@@ -137,10 +140,19 @@ const main = async () => {
     } catch (err) {
       console.log(`  FAILED   ${topic}\n           ${err.message}`);
       failed.push({ topic, reason: err.message });
-      // Taken either way: retrying a topic that just failed would spend the
-      // next slot on the same failure.
+      // Out of play for the rest of this run either way: retrying a topic
+      // that just failed would spend the next slot on the same failure.
       const row = rows.find((r) => r.topic === topic && r.status === 'idea');
       row.status = 'rejected';
+      // But a 429 or a timeout says the free pool is busy, not that the topic
+      // is bad -- and free-tier contention is the most likely failure there
+      // is. Dropping it from the file deleted a queued topic for good, which
+      // is a real cost for a transport error that will have cleared by
+      // tomorrow. Only a topic the model answered about, badly, is spent.
+      if (/HTTP 429|HTTP 5\d\d|did not respond within|Could not reach/.test(err.message)) {
+        keepQueued.add(topic);
+        console.log(`           transient, so the topic stays in the queue`);
+      }
     }
   }
 
@@ -148,16 +160,17 @@ const main = async () => {
     // Only topics still marked 'idea' stay queued. Drafted and rejected both
     // leave: a rejected topic can be re-added by hand, which is a decision
     // worth making rather than a loop to fall into.
-    const stillQueued = new Set(
-      rows.filter((r) => r.status === 'idea').map((r) => r.topic),
-    );
+    const stillQueued = new Set([
+      ...rows.filter((r) => r.status === 'idea').map((r) => r.topic),
+      ...keepQueued,
+    ]);
     queueFile.queue = queueFile.queue.filter((q) => stillQueued.has(q.topic));
     await writeQueue(queueFile);
   }
 
   console.log(
     `\n${written.length} drafted, ${failed.length} failed, ${
-      rows.filter((r) => r.status === 'idea').length
+      rows.filter((r) => r.status === 'idea').length + keepQueued.size
     } left in the queue.`,
   );
 

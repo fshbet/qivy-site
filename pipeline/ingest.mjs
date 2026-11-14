@@ -30,7 +30,14 @@ import { validateDraft, checkSources, buildMarkdown } from '../studio/src/pipeli
 // "needs a human" would eventually disagree, and the disagreement would show
 // up as a fabricated claim on the live site.
 import { holdWarnings } from '../studio/src/index.js';
-import { readQueue, writeQueue, DRAFTS_DIR, REVIEW_DIR, CATEGORIES } from './queue.mjs';
+import {
+  readQueue,
+  writeQueue,
+  DRAFTS_DIR,
+  REVIEW_DIR,
+  PUBLISHED_DIR,
+  CATEGORIES,
+} from './queue.mjs';
 
 const INBOX = path.join(path.dirname(fileURLToPath(import.meta.url)), 'inbox');
 const dryRun = process.argv.includes('--dry-run');
@@ -51,10 +58,21 @@ const main = async () => {
 
   const queueFile = await readQueue();
   const queued = new Map(queueFile.queue.map((q) => [q.topic, q.category]));
+  // promote.mjs refuses a slug that is already published -- rightly, since
+  // committing it would rewrite a page readers have seen. But it refuses
+  // AFTER this script has dropped the topic from the queue, so the topic was
+  // spent on an article nobody would ever read. Catching the collision here
+  // leaves the topic queued for a different angle tomorrow.
+  const publishedSlugs = new Set(
+    (await readdir(PUBLISHED_DIR).catch(() => []))
+      .filter((f) => f.endsWith('.md'))
+      .map((f) => f.replace(/\.md$/, '')),
+  );
   console.log(`${files.length} file(s) in the inbox${dryRun ? ' (dry run)' : ''}\n`);
 
   const done = [];
   const rejected = [];
+  const seenSlugs = new Map();
 
   for (const file of files) {
     const where = path.join(INBOX, file);
@@ -84,6 +102,15 @@ const main = async () => {
         // and validateDraft still warns on anything it can see in the text.
         topicSimilarity: 0,
       });
+
+      if (publishedSlugs.has(draft.slug)) {
+        throw new Error(`${draft.slug}.md is already published; leaving the topic queued`);
+      }
+      // Two inbox files can land on one slug, and the second would overwrite
+      // the first in drafts/ -- two topics spent, one article.
+      if (seenSlugs.has(draft.slug)) {
+        throw new Error(`${draft.slug}.md was already written by ${seenSlugs.get(draft.slug)}`);
+      }
 
       const checked = await checkSources(draft.sources);
       if (checked.allDead) throw new Error(`every source is dead: ${checked.dead.join('; ')}`);
@@ -115,6 +142,7 @@ const main = async () => {
         console.log(`           warning: ${w}`);
       }
       if (hold.length) console.log(`           held in pipeline/needs-review/ for you to read`);
+      seenSlugs.set(draft.slug, file);
       done.push(topic);
     } catch (err) {
       // Left in the inbox on purpose: a rejected file is evidence, and the

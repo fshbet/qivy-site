@@ -354,8 +354,22 @@ export function dangerousHtml(markdown) {
 
 // ─── Validation ─────────────────────────────────────────────────────────
 
-const FIRST_PERSON =
-  /\b(I |I've|I'm|I'd|my |we tested|we ran|we benchmarked|in my experience|when I )/gi;
+// Two patterns, because one of them has to be case-sensitive. The old single
+// regex carried the `i` flag, so `\bI ` also matched a lowercase loop
+// variable: `for i in range(10)` was reported as a fabricated claim of
+// personal experience. Measured on a real draft -- the body matched ["i "]
+// and the warning read "First-person language found (i)".
+//
+// It also ran on the WHOLE body, fences included, and a warning is what
+// `holdWarnings` treats as needing a person. So every article containing a
+// Python loop was diverted to needs-review/, which the publisher never reads.
+// A gate that holds everything is not a cautious gate.
+//
+// The cost of reading prose only: "# I tested this" in a code comment is no
+// longer caught. Worth it -- that is rare, and the false positive was daily.
+const FIRST_PERSON_PRONOUN = /\b(I|I've|I'm|I'd) /g;
+const FIRST_PERSON_CLAIM =
+  /\b(my |we tested|we ran|we benchmarked|in my experience|when i )/gi;
 
 /**
  * Parse the model output and enforce the editorial rules.
@@ -399,7 +413,13 @@ export function validateDraft(raw, { category, topicSimilarity }) {
 
   const tags = (Array.isArray(a.tags) ? a.tags : [])
     .map((t) => String(t).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))
-    .filter(Boolean)
+    // content.config.ts asks for z.string().min(2), and a one-character tag
+    // is the kind of thing a model writes for an article about C or about X.
+    // `filter(Boolean)` let it through, and it then failed the SITE BUILD --
+    // hours later, in a red deploy nobody was watching, with every later
+    // article blocked behind it. The gap was that this list said it mirrored
+    // the schema and did not.
+    .filter((t) => t.length >= 2)
     .slice(0, 8);
   if (!tags.length) tags.push(category || 'ai');
 
@@ -422,7 +442,16 @@ export function validateDraft(raw, { category, topicSimilarity }) {
   }
 
   const body = String(a.body);
-  const hits = [...new Set((body.match(FIRST_PERSON) || []).map((h) => h.trim()))];
+  // Prose only: see the note on the patterns above.
+  const prose = stripFences(body);
+  const hits = [
+    ...new Set(
+      [
+        ...(prose.match(FIRST_PERSON_PRONOUN) || []),
+        ...(prose.match(FIRST_PERSON_CLAIM) || []),
+      ].map((h) => h.trim()),
+    ),
+  ];
 
   const slug = String(a.slug)
     .toLowerCase()
@@ -633,7 +662,10 @@ export function buildMarkdown(draft, { category, publishDate }) {
     'sources:',
     ...draft.sources.map((s) => `  - ${yaml(s)}`),
     'tags:',
-    ...draft.tags.map((t) => `  - ${t}`),
+    // Quoted like every other value here. Unquoted, a tag of `true` is a
+    // YAML boolean rather than a string, and the schema wants strings -- so
+    // one plausible tag would fail the build instead of the draft.
+    ...draft.tags.map((t) => `  - ${yaml(t)}`),
     '---',
     '',
   ];
@@ -646,8 +678,20 @@ export function buildMarkdown(draft, { category, publishDate }) {
  * Commit a file straight to the publishing branch. Merging a pull request
  * was the old approval gate; here the gate is this app — nothing is
  * committed until you press Publish.
+ *
+ * It REFUSES to replace a file that already exists unless `overwrite` says
+ * otherwise. The slug comes from a model, and two articles on neighbouring
+ * topics produce the same filename — so the default behaviour was a silent
+ * rewrite of a published page, recoverable only from git history. Overwriting
+ * is now something a caller has to ask for by name.
+ *
+ * `impl` is the fetch to use, so a test can drive both branches without a
+ * network. Same pattern as `checkSources`.
  */
-export async function commitFile({ token, owner, repo, branch, path, content, message }) {
+export async function commitFile(
+  { token, owner, repo, branch, path, content, message, overwrite = false },
+  impl = fetch,
+) {
   const base = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -658,14 +702,21 @@ export async function commitFile({ token, owner, repo, branch, path, content, me
 
   // An existing file needs its blob SHA, or the API rejects the write.
   let sha;
-  const existing = await fetch(`${base}?ref=${encodeURIComponent(branch)}`, { headers });
+  const existing = await impl(`${base}?ref=${encodeURIComponent(branch)}`, { headers });
   if (existing.ok) {
+    if (!overwrite) {
+      throw new Error(
+        `${path} already exists on ${branch}. Publishing would overwrite a live article ` +
+          'that readers may already have seen — change the slug, or delete the published ' +
+          'file first.',
+      );
+    }
     sha = (await existing.json()).sha;
   } else if (existing.status !== 404) {
     throw new Error(`GitHub lookup failed: HTTP ${existing.status} ${await existing.text()}`);
   }
 
-  const res = await fetch(base, {
+  const res = await impl(base, {
     method: 'PUT',
     headers,
     body: JSON.stringify({
