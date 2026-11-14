@@ -1,0 +1,10 @@
+# Workflow files are pinned to LF on purpose.
+#
+# A `run: |` block is bash, and bash on the Linux runner treats a trailing
+# carriage return as part of the command -- so a workflow committed from
+# Windows with CRLF endings fails with "$'\r': command not found" on a line
+# that looks perfectly correct in an editor. This repository has
+# core.autocrlf=true, which makes that a real possibility rather than a
+# theoretical one.
+*.yml text eol=lf
+*.yaml text eol=lf

@@ -1,0 +1,104 @@
+# Draft with Claude, fall back to OpenRouter, publish five a day.
+#
+# Runs on GitHub's cloud, so it does not care whether your PC is on. Claude
+# authenticates with your Claude subscription through CLAUDE_CODE_OAUTH_TOKEN,
+# not an API key — see pipeline/README.md for the one-time setup.
+#
+# The order of the steps is the design:
+#   check    refuses to spend a model call on a broken queue
+#   claude   writes JSON into pipeline/inbox/ and nothing else
+#   ingest   puts every article through the SAME validator the dashboard uses
+#   fallback only if Claude produced nothing usable
+#   promote  moves up to five clean drafts into the live site
+#   commit   one commit, which triggers the Pages build
+name: Articles
+
+on:
+  schedule:
+    # 01:00 UTC = 06:30 IST, before the day starts.
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      publish_limit:
+        description: 'How many drafts to publish this run'
+        required: false
+        default: '5'
+
+# Least privilege, but contents:write is unavoidable: the whole job is to
+# commit articles. id-token:write is what the Claude action needs for its
+# default GitHub App authentication.
+permissions:
+  contents: write
+  id-token: write
+
+# Never two runs committing to main at once. A scheduled run and a manual one
+# landing together would conflict on the queue file.
+concurrency:
+  group: articles
+  cancel-in-progress: false
+
+jobs:
+  articles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Fails the run before anything expensive happens: a bad category, an
+      # article whose title cannot be parsed, two queued topics that are the
+      # same article.
+      - name: Check the queue
+        run: node pipeline/check.mjs
+
+      # Claude gets Read, Write, Edit and the research tools, and NOT Bash.
+      # That is deliberate and it is the only thing stopping it committing:
+      # the action's docs say Claude has no shell until you grant it, so
+      # leaving Bash out means it cannot run git even if asked to.
+      - name: Draft with Claude
+        id: claude
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: 'Read pipeline/PROMPT.md and follow it exactly. It is your complete brief.'
+          claude_args: |
+            --allowedTools "Read,Write,Edit,Glob,Grep,WebFetch,WebSearch"
+
+      # Validates whatever Claude left behind. Exits non-zero when the inbox
+      # was empty or nothing in it was usable, which is what the fallback
+      # below keys off.
+      - name: Validate what Claude wrote
+        id: ingest
+        continue-on-error: true
+        run: node pipeline/ingest.mjs
+
+      # Only when Claude produced nothing usable — a bad token, an outage, a
+      # run that wrote no files. A failed Claude step should cost a better
+      # article, not the whole day.
+      - name: Fall back to OpenRouter
+        if: steps.claude.outcome != 'success' || steps.ingest.outcome != 'success'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          echo "Claude step: ${{ steps.claude.outcome }}, ingest: ${{ steps.ingest.outcome }}"
+          node pipeline/draft.mjs --count 10
+
+      - name: Publish up to the daily limit
+        run: node pipeline/promote.mjs --limit ${{ github.event.inputs.publish_limit || '5' }}
+
+      - name: Commit
+        run: |
+          git config user.name  'qivy-articles[bot]'
+          git config user.email 'qivy-articles[bot]@users.noreply.github.com'
+          git add -A pipeline src/content/articles
+          if git diff --cached --quiet; then
+            echo 'Nothing changed. Not committing.'
+            exit 0
+          fi
+          published=$(git diff --cached --name-only --diff-filter=A -- src/content/articles | wc -l)
+          git commit -m "Publish ${published} article(s) and update the drafting queue" \
+                     -m 'Drafted and promoted by .github/workflows/articles.yml.'
+          git push
