@@ -26,10 +26,12 @@ on:
 
 # Least privilege, but contents:write is unavoidable: the whole job is to
 # commit articles. id-token:write is what the Claude action needs for its
-# default GitHub App authentication.
+# default GitHub App authentication, and what deploy-pages uses to prove it
+# is allowed to publish. pages:write is for the deploy job at the bottom.
 permissions:
   contents: write
   id-token: write
+  pages: write
 
 # Never two runs committing to main at once. A scheduled run and a manual one
 # landing together would conflict on the queue file.
@@ -40,6 +42,10 @@ concurrency:
 jobs:
   articles:
     runs-on: ubuntu-latest
+    outputs:
+      # Whether anything was actually committed, so the deploy below does not
+      # republish identical content on a day that produced no article.
+      committed: ${{ steps.commit.outputs.committed }}
     steps:
       - uses: actions/checkout@v6
 
@@ -101,15 +107,55 @@ jobs:
           npm run build
 
       - name: Commit
+        id: commit
         run: |
           git config user.name  'qivy-articles[bot]'
           git config user.email 'qivy-articles[bot]@users.noreply.github.com'
           git add -A pipeline src/content/articles
           if git diff --cached --quiet; then
             echo 'Nothing changed. Not committing.'
+            echo 'committed=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
           published=$(git diff --cached --name-only --diff-filter=A -- src/content/articles | wc -l)
           git commit -m "Publish ${published} article(s) and update the drafting queue" \
                      -m 'Drafted and promoted by .github/workflows/articles.yml.'
           git push
+          echo 'committed=true' >> "$GITHUB_OUTPUT"
+
+      # The dist/ the build gate just produced, which is exactly what was
+      # committed. Uploaded here so the deploy job below can publish it
+      # without building the site a second time.
+      - name: Keep the built site for the deploy
+        if: steps.commit.outputs.committed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  # Why this job exists at all, and it is not tidiness:
+  #
+  # The commit above is made with the default GITHUB_TOKEN, and GitHub does
+  # not start a workflow from a commit made with that token. So deploy.yml
+  # never saw it. Measured on the first real run: five articles landed as
+  # dc4f39f and every one answered 404 until the Pages build was started by
+  # hand. deploy.yml's own 02:30 UTC schedule would have picked them up about
+  # ninety minutes later, which is a gap and a dependency on two crons
+  # staying in the right order, not a fix.
+  #
+  # It needs its own job because `environment` is set per job, and deploy
+  # -pages requires the github-pages environment.
+  deploy:
+    needs: articles
+    if: needs.articles.outputs.committed == 'true'
+    runs-on: ubuntu-latest
+    # Shares the group deploy.yml uses, so the two never publish to Pages at
+    # the same moment. The group name is what matters, not the workflow.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
