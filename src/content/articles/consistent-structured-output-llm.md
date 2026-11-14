@@ -7,8 +7,8 @@ seoTitle: 'Consistent structured output from an LLM'
 metaDescription: 'Get valid JSON from an LLM without the chatter. Use system messages, JSON mode, and clear field names.'
 verification: researched
 sources:
-  - 'https://platform.openai.com/docs/api-reference/chat/create'
-  - 'https://platform.openai.com/docs/guides/structured-outputs'
+  - 'https://developers.openai.com/api/reference/resources/chat'
+  - 'https://developers.openai.com/api/docs/guides/structured-outputs'
 tags:
   - 'ai'
   - 'llm'
@@ -25,7 +25,7 @@ Steps:
 2. In your user message, name the fields you need. Example: give me the customer name, order number, and total as JSON.
 3. Keep unrelated questions out of this turn.
 
-Reference: [Chat completions API reference](https://platform.openai.com/docs/api-reference/chat/create)
+Reference: [Chat completions API reference](https://developers.openai.com/api/reference/resources/chat)
 
 ## Turn on JSON mode
 JSON is plain text that looks like labelled boxes and lists. Programs can read it easily. JSON mode is a provider setting that forces the model to emit valid JSON instead of free-flowing text. It does not choose your field names; you still ask for those in the prompt.
@@ -35,7 +35,7 @@ Steps:
 2. Keep the system message from the section above.
 3. Say which fields are required and which can be empty.
 
-Reference: [Structured outputs](https://platform.openai.com/docs/guides/structured-outputs)
+Reference: [Structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
 
 ## Expected result
 The model replies with only JSON, starting with `{` and ending with `}`. Your code can read it directly without stripping markdown or fixing missing fields. If it still adds chatter, check that you set the system message before your user message in the same request.

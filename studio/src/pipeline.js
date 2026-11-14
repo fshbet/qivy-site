@@ -555,6 +555,26 @@ export function publishedLinks(markdown) {
 //   moved       Resolved somewhere else. Worth tidying, nothing more.
 //
 // Only `dead` refuses a publish. The other two are things to tell a human.
+/**
+ * Whether a cited URL and the URL it resolved to are the same page.
+ *
+ * Two differences do not count as a redirect worth reporting:
+ *
+ *   the fragment   Response.url never carries one, so every anchored
+ *                  citation looked like a redirect to its own page -- and
+ *                  the style rules ask for anchors.
+ *   a trailing /   docs.n8n.io strips it, so a perfectly canonical citation
+ *                  was reported as "the canonical URL differs" followed by
+ *                  two URLs a reader cannot tell apart. Measured on draft
+ *                  11, where both of its sources said exactly that.
+ *
+ * A note that fires on a non-difference trains you to skip the notes.
+ */
+export function sameTarget(cited, resolved) {
+  const bare = (u) => u.split('#')[0].replace(/\/+$/, '');
+  return bare(cited) === bare(resolved);
+}
+
 export async function checkSources(sources, impl = fetch) {
   const dead = [];
   const unverified = [];
@@ -585,10 +605,7 @@ export async function checkSources(sources, impl = fetch) {
           // protection as a disguise -- which is exactly why it reaches you
           // as a warning instead of being waved through silently.
           unverified.push(`${url} (HTTP ${res.status})`);
-        } else if (res.url && res.url !== url.split('#')[0]) {
-          // Compared without the fragment: Response.url never carries one, so
-          // every anchored citation would otherwise look like a redirect to
-          // its own page -- and the style rules ask for anchors.
+        } else if (res.url && sameTarget(url, res.url) === false) {
           moved.push(`${url} -> ${res.url}`);
         }
       } catch (err) {

@@ -885,6 +885,27 @@ test('"in my experience" is caught wherever it sits in a sentence', () => {
   assert.ok(d.warnings.some((w) => /first-person/i.test(w)));
 });
 
+await atest('a trailing slash the server strips is not a redirect', async () => {
+  // Draft 11 carried this exact warning twice: "the canonical URL differs",
+  // followed by two URLs a reader cannot tell apart. A note that fires on a
+  // non-difference trains you to skip the notes.
+  const url = 'https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.scheduletrigger/';
+  const r = await checkSources(
+    [url],
+    fakeFetch({ [url]: { status: 200, url: url.replace(/\/$/, '') } }),
+  );
+  assert.deepEqual(r.moved, []);
+  assert.deepEqual(r.warnings, []);
+});
+
+await atest('a real redirect is still reported', async () => {
+  const r = await checkSources(
+    ['https://old.test/a/'],
+    fakeFetch({ 'https://old.test/a/': { status: 200, url: 'https://new.test/b' } }),
+  );
+  assert.equal(r.moved.length, 1);
+});
+
 await atest('commitFile refuses to overwrite a live article', async () => {
   // The slug comes from a model, so two articles on neighbouring topics
   // produce one filename. This used to fetch the existing blob SHA and PUT
