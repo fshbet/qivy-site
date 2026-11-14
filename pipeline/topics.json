@@ -1,60 +1,185 @@
 {
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published.",
   "queue": [
-    { "category": "automation", "topic": "Send a notification from Python in fifteen lines" },
-    { "category": "automation", "topic": "Connect two apps with a webhook when neither has an integration" },
-    { "category": "automation", "topic": "Automate repetitive file renaming and sorting" },
-    { "category": "automation", "topic": "The five n8n nodes that cover most real workflows" },
-    { "category": "automation", "topic": "A scheduled workflow with no paid services" },
-    { "category": "tips", "topic": "Windows keyboard shortcuts that actually save time" },
-    { "category": "tips", "topic": "Browser features that replace an extension you installed" },
-    { "category": "tips", "topic": "VS Code settings worth changing on day one" },
-    { "category": "tips", "topic": "Fixing the three most common it just stopped working problems" },
-    { "category": "ai", "topic": "Make an AI assistant remember your preferences with project instructions" },
-    { "category": "ai", "topic": "Cut an AI bill by caching the part of the prompt that never changes" },
-    { "category": "ai", "topic": "Pull text out of a screenshot with a vision model" },
-    { "category": "ai", "topic": "Why an AI answer changes every time you ask the same question" },
-    { "category": "ai", "topic": "Check whether an AI assistant can really see the web before trusting it" },
-    { "category": "ai", "topic": "Stop an AI model inventing citations by handing it the source" },
-    { "category": "ai", "topic": "Work out what a prompt costs before you run it a thousand times" },
-    { "category": "ai", "topic": "Choose between a reasoning model and a fast model for one job" },
-    { "category": "ai", "topic": "Serve a local model behind an API so your scripts stay unchanged" },
-    { "category": "ai", "topic": "Carry a long conversation past the context limit without losing the thread" },
-    { "category": "ai", "topic": "Turn a meeting recording into minutes you can actually send" },
-    { "category": "ai", "topic": "Write a system prompt that survives being moved to another model" },
-    { "category": "ai", "topic": "Have an AI review your writing without it flattening your voice" },
-    { "category": "ai", "topic": "Stop an AI assistant agreeing with you when you need a real check" },
-    { "category": "ai", "topic": "Give a coding agent a test to run so it knows when it is finished" },
-    { "category": "ai", "topic": "Ask about page 40 of an attached document, not page 1" },
-    { "category": "ai", "topic": "Quantisation explained with the only numbers your machine cares about" },
-    { "category": "ai", "topic": "Run a useful AI model on a laptop with no dedicated graphics card" },
-    { "category": "ai", "topic": "What an AI model actually sees when you paste a table into it" },
-    { "category": "ai", "topic": "Compare two AI assistants on one task and keep it fair" },
-    { "category": "ai", "topic": "Build a prompt library you can paste from in any tool" },
-    { "category": "ai", "topic": "Let an AI assistant use your accounts safely with a read-only key" },
-    { "category": "ai", "topic": "Batch a hundred small AI jobs overnight for a fraction of the price" },
-    { "category": "automation", "topic": "Retry one failed step without re-running the whole workflow" },
-    { "category": "automation", "topic": "Keep a workflow secret out of the node that uses it" },
-    { "category": "automation", "topic": "Start a workflow when someone submits a Google Form" },
-    { "category": "automation", "topic": "Run a Python script on a schedule on Windows, reliably" },
-    { "category": "automation", "topic": "File an email attachment automatically when it arrives" },
-    { "category": "automation", "topic": "Watch a folder and act the moment a file lands in it" },
-    { "category": "automation", "topic": "Keep two spreadsheets in step on a schedule" },
-    { "category": "automation", "topic": "Call an API that needs its token refreshed, without doing it yourself" },
-    { "category": "automation", "topic": "Turn a messy webhook payload into one clean record" },
-    { "category": "automation", "topic": "Throttle your own workflow so a free API does not lock you out" },
-    { "category": "automation", "topic": "Log what a workflow did so you can prove it ran" },
-    { "category": "automation", "topic": "Back up a Google Sheet every week without thinking about it" },
-    { "category": "automation", "topic": "Collapse thirty notifications into one daily digest" },
-    { "category": "automation", "topic": "Catch duplicate rows before they reach your database" },
-    { "category": "tips", "topic": "Find which window is playing that sound" },
-    { "category": "tips", "topic": "Reclaim disk space Windows will not admit it is using" },
-    { "category": "tips", "topic": "Make Windows Search find the files it keeps missing" },
-    { "category": "tips", "topic": "Recover a file you just overwrote" },
-    { "category": "tips", "topic": "Stop one browser tab eating your whole battery" },
-    { "category": "tips", "topic": "Separate work and personal browsing without two browsers" },
-    { "category": "tips", "topic": "Make a scanned PDF searchable" },
-    { "category": "tips", "topic": "Keep a laptop awake only while a long job is running" },
-    { "category": "tips", "topic": "Get a second monitor to behave the way you expect" }
+    {
+      "category": "ai",
+      "topic": "Cut an AI bill by caching the part of the prompt that never changes"
+    },
+    {
+      "category": "ai",
+      "topic": "Pull text out of a screenshot with a vision model"
+    },
+    {
+      "category": "ai",
+      "topic": "Why an AI answer changes every time you ask the same question"
+    },
+    {
+      "category": "ai",
+      "topic": "Check whether an AI assistant can really see the web before trusting it"
+    },
+    {
+      "category": "ai",
+      "topic": "Stop an AI model inventing citations by handing it the source"
+    },
+    {
+      "category": "ai",
+      "topic": "Work out what a prompt costs before you run it a thousand times"
+    },
+    {
+      "category": "ai",
+      "topic": "Choose between a reasoning model and a fast model for one job"
+    },
+    {
+      "category": "ai",
+      "topic": "Serve a local model behind an API so your scripts stay unchanged"
+    },
+    {
+      "category": "ai",
+      "topic": "Carry a long conversation past the context limit without losing the thread"
+    },
+    {
+      "category": "ai",
+      "topic": "Turn a meeting recording into minutes you can actually send"
+    },
+    {
+      "category": "ai",
+      "topic": "Write a system prompt that survives being moved to another model"
+    },
+    {
+      "category": "ai",
+      "topic": "Have an AI review your writing without it flattening your voice"
+    },
+    {
+      "category": "ai",
+      "topic": "Stop an AI assistant agreeing with you when you need a real check"
+    },
+    {
+      "category": "ai",
+      "topic": "Give a coding agent a test to run so it knows when it is finished"
+    },
+    {
+      "category": "ai",
+      "topic": "Ask about page 40 of an attached document, not page 1"
+    },
+    {
+      "category": "ai",
+      "topic": "Quantisation explained with the only numbers your machine cares about"
+    },
+    {
+      "category": "ai",
+      "topic": "Run a useful AI model on a laptop with no dedicated graphics card"
+    },
+    {
+      "category": "ai",
+      "topic": "What an AI model actually sees when you paste a table into it"
+    },
+    {
+      "category": "ai",
+      "topic": "Compare two AI assistants on one task and keep it fair"
+    },
+    {
+      "category": "ai",
+      "topic": "Build a prompt library you can paste from in any tool"
+    },
+    {
+      "category": "ai",
+      "topic": "Let an AI assistant use your accounts safely with a read-only key"
+    },
+    {
+      "category": "ai",
+      "topic": "Batch a hundred small AI jobs overnight for a fraction of the price"
+    },
+    {
+      "category": "automation",
+      "topic": "Retry one failed step without re-running the whole workflow"
+    },
+    {
+      "category": "automation",
+      "topic": "Keep a workflow secret out of the node that uses it"
+    },
+    {
+      "category": "automation",
+      "topic": "Start a workflow when someone submits a Google Form"
+    },
+    {
+      "category": "automation",
+      "topic": "Run a Python script on a schedule on Windows, reliably"
+    },
+    {
+      "category": "automation",
+      "topic": "File an email attachment automatically when it arrives"
+    },
+    {
+      "category": "automation",
+      "topic": "Watch a folder and act the moment a file lands in it"
+    },
+    {
+      "category": "automation",
+      "topic": "Keep two spreadsheets in step on a schedule"
+    },
+    {
+      "category": "automation",
+      "topic": "Call an API that needs its token refreshed, without doing it yourself"
+    },
+    {
+      "category": "automation",
+      "topic": "Turn a messy webhook payload into one clean record"
+    },
+    {
+      "category": "automation",
+      "topic": "Throttle your own workflow so a free API does not lock you out"
+    },
+    {
+      "category": "automation",
+      "topic": "Log what a workflow did so you can prove it ran"
+    },
+    {
+      "category": "automation",
+      "topic": "Back up a Google Sheet every week without thinking about it"
+    },
+    {
+      "category": "automation",
+      "topic": "Collapse thirty notifications into one daily digest"
+    },
+    {
+      "category": "automation",
+      "topic": "Catch duplicate rows before they reach your database"
+    },
+    {
+      "category": "tips",
+      "topic": "Find which window is playing that sound"
+    },
+    {
+      "category": "tips",
+      "topic": "Reclaim disk space Windows will not admit it is using"
+    },
+    {
+      "category": "tips",
+      "topic": "Make Windows Search find the files it keeps missing"
+    },
+    {
+      "category": "tips",
+      "topic": "Recover a file you just overwrote"
+    },
+    {
+      "category": "tips",
+      "topic": "Stop one browser tab eating your whole battery"
+    },
+    {
+      "category": "tips",
+      "topic": "Separate work and personal browsing without two browsers"
+    },
+    {
+      "category": "tips",
+      "topic": "Make a scanned PDF searchable"
+    },
+    {
+      "category": "tips",
+      "topic": "Keep a laptop awake only while a long job is running"
+    },
+    {
+      "category": "tips",
+      "topic": "Get a second monitor to behave the way you expect"
+    }
   ]
 }
