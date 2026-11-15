@@ -3,46 +3,6 @@
   "queue": [
     {
       "category": "ai",
-      "topic": "Cut an AI bill by caching the part of the prompt that never changes"
-    },
-    {
-      "category": "ai",
-      "topic": "Pull text out of a screenshot with a vision model"
-    },
-    {
-      "category": "ai",
-      "topic": "Why an AI answer changes every time you ask the same question"
-    },
-    {
-      "category": "ai",
-      "topic": "Check whether an AI assistant can really see the web before trusting it"
-    },
-    {
-      "category": "ai",
-      "topic": "Stop an AI model inventing citations by handing it the source"
-    },
-    {
-      "category": "ai",
-      "topic": "Work out what a prompt costs before you run it a thousand times"
-    },
-    {
-      "category": "ai",
-      "topic": "Choose between a reasoning model and a fast model for one job"
-    },
-    {
-      "category": "ai",
-      "topic": "Serve a local model behind an API so your scripts stay unchanged"
-    },
-    {
-      "category": "ai",
-      "topic": "Carry a long conversation past the context limit without losing the thread"
-    },
-    {
-      "category": "ai",
-      "topic": "Turn a meeting recording into minutes you can actually send"
-    },
-    {
-      "category": "ai",
       "topic": "Write a system prompt that survives being moved to another model"
     },
     {
