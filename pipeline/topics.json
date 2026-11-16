@@ -3,46 +3,6 @@
   "queue": [
     {
       "category": "ai",
-      "topic": "Write a system prompt that survives being moved to another model"
-    },
-    {
-      "category": "ai",
-      "topic": "Have an AI review your writing without it flattening your voice"
-    },
-    {
-      "category": "ai",
-      "topic": "Stop an AI assistant agreeing with you when you need a real check"
-    },
-    {
-      "category": "ai",
-      "topic": "Give a coding agent a test to run so it knows when it is finished"
-    },
-    {
-      "category": "ai",
-      "topic": "Ask about page 40 of an attached document, not page 1"
-    },
-    {
-      "category": "ai",
-      "topic": "Quantisation explained with the only numbers your machine cares about"
-    },
-    {
-      "category": "ai",
-      "topic": "Run a useful AI model on a laptop with no dedicated graphics card"
-    },
-    {
-      "category": "ai",
-      "topic": "What an AI model actually sees when you paste a table into it"
-    },
-    {
-      "category": "ai",
-      "topic": "Compare two AI assistants on one task and keep it fair"
-    },
-    {
-      "category": "ai",
-      "topic": "Build a prompt library you can paste from in any tool"
-    },
-    {
-      "category": "ai",
       "topic": "Let an AI assistant use your accounts safely with a read-only key"
     },
     {

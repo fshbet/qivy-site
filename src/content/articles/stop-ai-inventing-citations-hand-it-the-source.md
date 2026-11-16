@@ -2,7 +2,7 @@
 title: 'Stop an AI model inventing citations by handing it the source'
 summary: 'Paste the source text into your AI chat and ask for quotes only from it, so the model cannot invent page numbers or links.'
 category: ai
-publishDate: 2026-11-15
+publishDate: 2026-11-16
 seoTitle: 'Stop AI inventing citations by handing it the source'
 metaDescription: 'Hand the AI the source text and ask it to quote only from that text, so it stops inventing page numbers and links.'
 verification: researched
