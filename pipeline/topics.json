@@ -2,46 +2,6 @@
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published.",
   "queue": [
     {
-      "category": "ai",
-      "topic": "Let an AI assistant use your accounts safely with a read-only key"
-    },
-    {
-      "category": "ai",
-      "topic": "Batch a hundred small AI jobs overnight for a fraction of the price"
-    },
-    {
-      "category": "automation",
-      "topic": "Retry one failed step without re-running the whole workflow"
-    },
-    {
-      "category": "automation",
-      "topic": "Keep a workflow secret out of the node that uses it"
-    },
-    {
-      "category": "automation",
-      "topic": "Start a workflow when someone submits a Google Form"
-    },
-    {
-      "category": "automation",
-      "topic": "Run a Python script on a schedule on Windows, reliably"
-    },
-    {
-      "category": "automation",
-      "topic": "File an email attachment automatically when it arrives"
-    },
-    {
-      "category": "automation",
-      "topic": "Watch a folder and act the moment a file lands in it"
-    },
-    {
-      "category": "automation",
-      "topic": "Keep two spreadsheets in step on a schedule"
-    },
-    {
-      "category": "automation",
-      "topic": "Call an API that needs its token refreshed, without doing it yourself"
-    },
-    {
       "category": "automation",
       "topic": "Turn a messy webhook payload into one clean record"
     },
