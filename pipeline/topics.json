@@ -2,46 +2,6 @@
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published.",
   "queue": [
     {
-      "category": "automation",
-      "topic": "Turn a messy webhook payload into one clean record"
-    },
-    {
-      "category": "automation",
-      "topic": "Throttle your own workflow so a free API does not lock you out"
-    },
-    {
-      "category": "automation",
-      "topic": "Log what a workflow did so you can prove it ran"
-    },
-    {
-      "category": "automation",
-      "topic": "Back up a Google Sheet every week without thinking about it"
-    },
-    {
-      "category": "automation",
-      "topic": "Collapse thirty notifications into one daily digest"
-    },
-    {
-      "category": "automation",
-      "topic": "Catch duplicate rows before they reach your database"
-    },
-    {
-      "category": "tips",
-      "topic": "Find which window is playing that sound"
-    },
-    {
-      "category": "tips",
-      "topic": "Reclaim disk space Windows will not admit it is using"
-    },
-    {
-      "category": "tips",
-      "topic": "Make Windows Search find the files it keeps missing"
-    },
-    {
-      "category": "tips",
-      "topic": "Recover a file you just overwrote"
-    },
-    {
       "category": "tips",
       "topic": "Stop one browser tab eating your whole battery"
     },
