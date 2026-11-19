@@ -2,7 +2,7 @@
 title: 'Start a workflow when someone submits a Google Form'
 summary: 'Automatically start a workflow the moment someone submits your Google Form, using a built-in script and trigger.'
 category: automation
-publishDate: 2026-11-17
+publishDate: 2026-11-19
 seoTitle: 'Start a workflow on Google Form submission'
 metaDescription: 'Run an Apps Script automatically on every Google Form submission. Step-by-step setup with triggers, email notification, and official docs references.'
 verification: researched

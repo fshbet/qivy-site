@@ -1,25 +1,4 @@
 {
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published.",
-  "queue": [
-    {
-      "category": "tips",
-      "topic": "Stop one browser tab eating your whole battery"
-    },
-    {
-      "category": "tips",
-      "topic": "Separate work and personal browsing without two browsers"
-    },
-    {
-      "category": "tips",
-      "topic": "Make a scanned PDF searchable"
-    },
-    {
-      "category": "tips",
-      "topic": "Keep a laptop awake only while a long job is running"
-    },
-    {
-      "category": "tips",
-      "topic": "Get a second monitor to behave the way you expect"
-    }
-  ]
+  "queue": []
 }

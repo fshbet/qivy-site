@@ -2,7 +2,7 @@
 title: 'Run a Python script on a schedule on Windows'
 summary: 'Use Windows Task Scheduler to run your Python script automatically at a set time, with reliability settings so it keeps running even when you are logged out.'
 category: automation
-publishDate: 2026-11-17
+publishDate: 2026-11-19
 seoTitle: 'Run Python script on schedule Windows Task Scheduler'
 metaDescription: 'Schedule a Python script on Windows using Task Scheduler. Step-by-step setup and reliability settings so it runs even when you are logged out.'
 verification: researched

@@ -2,7 +2,7 @@
 title: 'Throttle your own workflow so a free API does not lock you out'
 summary: 'Add pauses and error handling to your automation so free APIs keep working instead of blocking you.'
 category: automation
-publishDate: 2026-11-18
+publishDate: 2026-11-19
 seoTitle: 'Throttle workflow to avoid free API rate limits'
 metaDescription: 'Stop free APIs from locking you out by adding delays, handling 429 errors and caching responses in your automation.'
 verification: researched

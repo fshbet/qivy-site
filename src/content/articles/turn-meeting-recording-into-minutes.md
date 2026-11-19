@@ -2,7 +2,7 @@
 title: 'Turn a meeting recording into minutes you can actually send'
 summary: 'Turn a meeting recording into clear minutes using a transcript and a simple AI prompt, then send them to your team within ten minutes.'
 category: ai
-publishDate: 2026-11-15
+publishDate: 2026-11-19
 seoTitle: 'Turn meeting recording into minutes you can send'
 metaDescription: 'Convert a meeting recording into sendable minutes with a transcript and a simple AI prompt. Practical steps and expected results.'
 verification: researched
