@@ -54,10 +54,22 @@ jobs:
           node-version: '22'
           cache: npm
 
-      # Fails the run before anything expensive happens: a bad category, an
-      # article whose title cannot be parsed, two queued topics that are the
-      # same article.
+      # Stops the DRAFTING before anything expensive happens: a bad category,
+      # an article whose title cannot be parsed, two queued topics that are
+      # the same article, a queue that has run dry.
+      #
+      # It does not stop the publishing, and that distinction is the whole
+      # point of continue-on-error here. Measured on 20 and 21 November: the
+      # queue hit zero, this step exited 1 in ten seconds, and promote.mjs
+      # never ran -- so two drafts that were already written and already
+      # clean sat in pipeline/drafts/ for two days. promote.mjs does not read
+      # the queue at all, so it had no reason to be held back by it.
+      #
+      # The run still goes red, at the last step of this job, so a broken
+      # queue cannot pass unnoticed.
       - name: Check the queue
+        id: check
+        continue-on-error: true
         run: node pipeline/check.mjs
 
       # Claude gets Read, Write, Edit and the research tools, and NOT Bash.
@@ -66,6 +78,7 @@ jobs:
       # leaving Bash out means it cannot run git even if asked to.
       - name: Draft with Claude
         id: claude
+        if: steps.check.outcome == 'success'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
@@ -79,14 +92,23 @@ jobs:
       # below keys off.
       - name: Validate what Claude wrote
         id: ingest
+        if: steps.check.outcome == 'success'
         continue-on-error: true
         run: node pipeline/ingest.mjs
 
       # Only when Claude produced nothing usable — a bad token, an outage, a
       # run that wrote no files. A failed Claude step should cost a better
       # article, not the whole day.
+      #
+      # The check condition is not decoration: skipped steps report an
+      # outcome of 'skipped', so without it a failed queue check would skip
+      # Claude and then send the fallback off to draft from that same broken
+      # queue — ten model calls on nothing, which is exactly what the check
+      # exists to prevent.
       - name: Fall back to OpenRouter
-        if: steps.claude.outcome != 'success' || steps.ingest.outcome != 'success'
+        if: >
+          steps.check.outcome == 'success' &&
+          (steps.claude.outcome != 'success' || steps.ingest.outcome != 'success')
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
@@ -132,6 +154,18 @@ jobs:
         with:
           path: dist
 
+      # Last, so everything above has already run and anything publishable
+      # has already published. continue-on-error on the check would otherwise
+      # turn a dry or broken queue into a green run nobody looks at, which is
+      # how the queue reached zero unnoticed in the first place.
+      - name: Fail the run if the queue needs attention
+        if: steps.check.outcome != 'success'
+        run: |
+          echo 'The queue check at the top of this run failed, so nothing was drafted.'
+          echo 'Anything already clean in pipeline/drafts/ was still published.'
+          echo 'Read the FAIL line in the "Check the queue" step above.'
+          exit 1
+
   # Why this job exists at all, and it is not tidiness:
   #
   # The commit above is made with the default GITHUB_TOKEN, and GitHub does
@@ -146,7 +180,12 @@ jobs:
   # -pages requires the github-pages environment.
   deploy:
     needs: articles
-    if: needs.articles.outputs.committed == 'true'
+    # !cancelled() rather than a bare needs check, because the job above now
+    # ends red on a dry queue — and an article that was committed must still
+    # go live. `committed` is only ever 'true' when the commit step itself
+    # ran, so a genuine failure earlier (a build that broke) leaves it unset
+    # and nothing deploys.
+    if: ${{ !cancelled() && needs.articles.outputs.committed == 'true' }}
     runs-on: ubuntu-latest
     # Shares the group deploy.yml uses, so the two never publish to Pages at
     # the same moment. The group name is what matters, not the workflow.

@@ -102,6 +102,47 @@ check('the next topic is pickable against what is already published', () => {
   assert.equal(picked.topic.topic, queueFile.queue[0].topic, 'oldest queued topic is not next up');
 });
 
+// ─── The workflow that calls this script ───
+
+// What this guards, measured: on 20 and 21 November the queue hit zero, this
+// script exited 1 at ten seconds, and promote.mjs never ran -- so two drafts
+// that were already written and already clean sat in pipeline/drafts/ for two
+// days. promote.mjs does not read the queue, so it had no business waiting on
+// it. Drafting must wait on this check. Publishing must not. And the run must
+// still go red, or a dry queue is a green run nobody looks at.
+const workflow = await readFile(
+  new URL('../.github/workflows/articles.yml', import.meta.url),
+  'utf8',
+);
+
+check('the workflow gates the drafting steps on this script and nothing else', () => {
+  const step = (name) => {
+    const i = workflow.indexOf(`- name: ${name}`);
+    assert.ok(i !== -1, `no step named "${name}"`);
+    const end = workflow.indexOf('\n      - ', i + 1);
+    return workflow.slice(i, end === -1 ? undefined : end);
+  };
+
+  assert.match(step('Check the queue'), /continue-on-error: true/);
+
+  for (const name of [
+    'Draft with Claude',
+    'Validate what Claude wrote',
+    'Fall back to OpenRouter',
+  ]) {
+    assert.match(step(name), /steps\.check\.outcome == 'success'/, `${name} is not gated`);
+  }
+
+  for (const name of ['Publish up to the daily limit', 'Prove the site still builds', 'Commit']) {
+    assert.doesNotMatch(step(name), /steps\.check\./, `${name} must not wait on the check`);
+  }
+
+  assert.match(
+    step('Fail the run if the queue needs attention'),
+    /steps\.check\.outcome != 'success'/,
+  );
+});
+
 // ─── Runway, a warning rather than a failure ───
 
 const PER_DAY = 10;
