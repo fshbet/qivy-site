@@ -2,7 +2,7 @@
 title: 'Turn a messy webhook payload into one clean record'
 summary: 'Transform inconsistent webhook data into a single flat record before saving it to a spreadsheet or database.'
 category: automation
-publishDate: 2026-11-18
+publishDate: 2026-11-22
 seoTitle: 'Turn a messy webhook payload into one clean record'
 metaDescription: 'Learn how to flatten inconsistent webhook JSON into a single clean record using n8n, then send it to a spreadsheet or database.'
 verification: researched
