@@ -2,46 +2,6 @@
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published. Topics are deliberately anchored to tools with stable official documentation — Python's stdlib, git, VS Code, ffmpeg, Microsoft Learn — because nine of the blocked drafts died on documentation URLs the model invented or that had moved. A topic whose canonical doc page has sat at the same URL for years is a topic a model can cite honestly. Categories are interleaved so a day's five articles are not all from one section.",
   "queue": [
     {
-      "category": "automation",
-      "topic": "Keep two folders in sync without paying for a sync service"
-    },
-    {
-      "category": "automation",
-      "topic": "Turn a folder of receipts into one spreadsheet"
-    },
-    {
-      "category": "ai",
-      "topic": "Ask a model what it needs before it starts work"
-    },
-    {
-      "category": "automation",
-      "topic": "Alert yourself when a page on the web changes"
-    },
-    {
-      "category": "tips",
-      "topic": "Get your clipboard history back after a restart"
-    },
-    {
-      "category": "ai",
-      "topic": "Run one prompt across a whole folder of files"
-    },
-    {
-      "category": "ai",
-      "topic": "Point a model at one file instead of the whole project"
-    },
-    {
-      "category": "automation",
-      "topic": "Fill a PDF form from a row in a spreadsheet"
-    },
-    {
-      "category": "ai",
-      "topic": "Use a cheap model for the boring half of an expensive job"
-    },
-    {
-      "category": "automation",
-      "topic": "Email yourself a weekly summary of what your scripts did"
-    },
-    {
       "category": "tips",
       "topic": "Search inside PDF files from your own file manager"
     },
