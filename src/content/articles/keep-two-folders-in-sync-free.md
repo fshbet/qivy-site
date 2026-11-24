@@ -2,7 +2,7 @@
 title: 'Keep two folders in sync without paying for a sync service'
 summary: 'Use free software to copy files between two folders on different devices as soon as they change.'
 category: automation
-publishDate: 2026-11-23
+publishDate: 2026-11-24
 seoTitle: 'Sync two folders for free without a cloud service'
 metaDescription: 'Keep two folders in sync across devices without paying for a cloud sync service. Free, step-by-step guide using Syncthing.'
 verification: researched

@@ -2,7 +2,7 @@
 title: 'Run one prompt across a whole folder of files'
 summary: 'Send the same AI prompt to every text file in a folder automatically, without opening them one by one.'
 category: ai
-publishDate: 2026-11-23
+publishDate: 2026-11-24
 seoTitle: 'Run one prompt across a whole folder of files'
 metaDescription: 'Automate one AI prompt across every file in a folder using a short Python script and the OpenAI API.'
 verification: researched

@@ -2,7 +2,7 @@
 title: 'Point an AI coding assistant at one file, not the whole project'
 summary: 'Give your AI coding assistant just the file you are editing instead of your whole project so its answers stay focused and it does not touch files you did not ask about.'
 category: ai
-publishDate: 2026-11-23
+publishDate: 2026-11-24
 seoTitle: 'Point an AI coding assistant at one file'
 metaDescription: 'Point your AI coding assistant at a single file instead of an entire project. Keep answers focused, cut noise, and avoid edits to files you did not ask for.'
 verification: researched
