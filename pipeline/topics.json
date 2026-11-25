@@ -2,46 +2,6 @@
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published. Topics are deliberately anchored to tools with stable official documentation — Python's stdlib, git, VS Code, ffmpeg, Microsoft Learn — because nine of the blocked drafts died on documentation URLs the model invented or that had moved. A topic whose canonical doc page has sat at the same URL for years is a topic a model can cite honestly. Categories are interleaved so a day's five articles are not all from one section.",
   "queue": [
     {
-      "category": "automation",
-      "topic": "Back up a SQLite database and prove the backup restores"
-    },
-    {
-      "category": "tips",
-      "topic": "Open any app from the keyboard without touching the mouse"
-    },
-    {
-      "category": "ai",
-      "topic": "Decide when a longer prompt is worth the extra cost"
-    },
-    {
-      "category": "ai",
-      "topic": "Find the single clause that changed between two contracts"
-    },
-    {
-      "category": "automation",
-      "topic": "Merge every new invoice into one PDF each month"
-    },
-    {
-      "category": "ai",
-      "topic": "Turn a long voice note into a list of tasks"
-    },
-    {
-      "category": "automation",
-      "topic": "Queue slow jobs so they do not all run at the same time"
-    },
-    {
-      "category": "tips",
-      "topic": "Make a bootable USB stick without installing anything"
-    },
-    {
-      "category": "ai",
-      "topic": "Catch a made-up file path before you run the command"
-    },
-    {
-      "category": "automation",
-      "topic": "Rename and file bank statements as they arrive"
-    },
-    {
       "category": "ai",
       "topic": "Have a model name its assumptions before it answers"
     },
