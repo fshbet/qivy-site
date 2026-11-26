@@ -3,46 +3,6 @@
   "queue": [
     {
       "category": "ai",
-      "topic": "Have a model name its assumptions before it answers"
-    },
-    {
-      "category": "ai",
-      "topic": "Set a token budget for a job and stay inside it"
-    },
-    {
-      "category": "automation",
-      "topic": "Run a script only while the laptop is on mains power"
-    },
-    {
-      "category": "tips",
-      "topic": "Mute the one browser tab that keeps making noise"
-    },
-    {
-      "category": "ai",
-      "topic": "Ask for a checklist, not an essay"
-    },
-    {
-      "category": "automation",
-      "topic": "Get tomorrow's calendar as plain text every evening"
-    },
-    {
-      "category": "ai",
-      "topic": "Read a spreadsheet with a model without sending all of it"
-    },
-    {
-      "category": "automation",
-      "topic": "Move photos off your phone into a folder on your PC"
-    },
-    {
-      "category": "ai",
-      "topic": "Turn a rough bullet list into a clear email"
-    },
-    {
-      "category": "tips",
-      "topic": "Set up a second desktop and actually use it"
-    },
-    {
-      "category": "ai",
       "topic": "Write one prompt that behaves the same on two models"
     },
     {

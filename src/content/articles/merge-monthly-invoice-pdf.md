@@ -2,7 +2,7 @@
 title: 'Merge every new invoice into one PDF each month'
 summary: 'A small Python script joins all new invoices in a folder into one monthly PDF and archives the originals.'
 category: automation
-publishDate: 2026-11-25
+publishDate: 2026-11-26
 seoTitle: 'Merge monthly invoices into one PDF'
 metaDescription: 'Automate monthly invoice merging with a Python script that combines new PDFs into one file and archives the originals.'
 verification: researched
