@@ -2,46 +2,6 @@
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published. Topics are deliberately anchored to tools with stable official documentation — Python's stdlib, git, VS Code, ffmpeg, Microsoft Learn — because nine of the blocked drafts died on documentation URLs the model invented or that had moved. A topic whose canonical doc page has sat at the same URL for years is a topic a model can cite honestly. Categories are interleaved so a day's five articles are not all from one section.",
   "queue": [
     {
-      "category": "ai",
-      "topic": "Write one prompt that behaves the same on two models"
-    },
-    {
-      "category": "automation",
-      "topic": "Post one note to three places at once"
-    },
-    {
-      "category": "ai",
-      "topic": "Sort a pile of support emails by what they are really asking"
-    },
-    {
-      "category": "automation",
-      "topic": "Watch a log file and tell you when a line matches"
-    },
-    {
-      "category": "tips",
-      "topic": "Make a laptop battery last a full working day"
-    },
-    {
-      "category": "ai",
-      "topic": "Explain a stack trace to yourself in plain language"
-    },
-    {
-      "category": "ai",
-      "topic": "Use a model to find the gap in your own notes"
-    },
-    {
-      "category": "automation",
-      "topic": "Convert a folder of documents to PDF in one command"
-    },
-    {
-      "category": "ai",
-      "topic": "Keep a record of which prompt produced which answer"
-    },
-    {
-      "category": "automation",
-      "topic": "Rotate your own log files before they fill the disk"
-    },
-    {
       "category": "tips",
       "topic": "Share a folder between two computers on your own network"
     },

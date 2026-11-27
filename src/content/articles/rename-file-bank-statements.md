@@ -2,7 +2,7 @@
 title: 'Rename and file bank statements as they arrive'
 summary: 'A small Python script saves new bank statements from your email, renames them, and files them into folders so you never sort them by hand.'
 category: automation
-publishDate: 2026-11-25
+publishDate: 2026-11-27
 seoTitle: 'Automate bank statement filing with Python'
 metaDescription: 'Use a short Python script to download bank statements from your email, rename them, and save them in dated folders automatically.'
 verification: researched

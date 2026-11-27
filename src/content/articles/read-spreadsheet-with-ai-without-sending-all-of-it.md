@@ -2,7 +2,7 @@
 title: 'Read a spreadsheet with an AI model without sending all of it'
 summary: 'Open your spreadsheet locally, keep only the rows you need, and paste that smaller slice into your AI chat.'
 category: ai
-publishDate: 2026-11-26
+publishDate: 2026-11-27
 seoTitle: 'Read spreadsheet with AI without uploading whole file'
 metaDescription: 'Learn to send only part of a spreadsheet to an AI model using Python and pandas, saving time and cost.'
 verification: researched
