@@ -2,7 +2,7 @@
 title: 'Rotate your own log files before they fill the disk'
 summary: 'Stop a single growing log file from filling your disk by rotating, compressing, and archiving old entries automatically.'
 category: automation
-publishDate: 2026-11-27
+publishDate: 2026-11-28
 seoTitle: 'Rotate log files before they fill your disk'
 metaDescription: 'Learn how to rotate your own log files on Linux using logrotate, keep old copies, compress them, and run it automatically with cron.'
 verification: researched

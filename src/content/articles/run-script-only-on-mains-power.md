@@ -2,7 +2,7 @@
 title: 'Run a script only while your laptop is on mains power'
 summary: 'Use Windows Task Scheduler to start your script only when the laptop is plugged into the wall, so heavy jobs never drain the battery.'
 category: automation
-publishDate: 2026-11-26
+publishDate: 2026-11-28
 seoTitle: 'Run script only on mains power Windows Task Scheduler'
 metaDescription: 'Schedule your script to run only when your laptop is plugged into mains power using Windows Task Scheduler. Protects battery life and stops interrupted jobs.'
 verification: researched

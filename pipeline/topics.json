@@ -2,46 +2,6 @@
   "note": "The drafting queue, in the repo so the workflow needs no database and no Cloudflare token. Oldest first is next up. Dedup history is NOT mirrored here: it is read from src/content/articles/*.md, which is the only place that cannot drift out of step with what is actually published. Topics are deliberately anchored to tools with stable official documentation — Python's stdlib, git, VS Code, ffmpeg, Microsoft Learn — because nine of the blocked drafts died on documentation URLs the model invented or that had moved. A topic whose canonical doc page has sat at the same URL for years is a topic a model can cite honestly. Categories are interleaved so a day's five articles are not all from one section.",
   "queue": [
     {
-      "category": "tips",
-      "topic": "Share a folder between two computers on your own network"
-    },
-    {
-      "category": "ai",
-      "topic": "Translate a document and keep its formatting"
-    },
-    {
-      "category": "automation",
-      "topic": "Resize images to a fixed width before uploading them"
-    },
-    {
-      "category": "ai",
-      "topic": "Spot when a model has guessed rather than answered"
-    },
-    {
-      "category": "ai",
-      "topic": "Read the numbers off a chart image and check them"
-    },
-    {
-      "category": "automation",
-      "topic": "Check a backup actually contains what you think it does"
-    },
-    {
-      "category": "tips",
-      "topic": "Reclaim the space Docker quietly took"
-    },
-    {
-      "category": "ai",
-      "topic": "Write the test first and let the model fill in the code"
-    },
-    {
-      "category": "maker",
-      "topic": "Make a printed part stronger by changing only its orientation"
-    },
-    {
-      "category": "ai",
-      "topic": "Compare two long documents and read only the differences"
-    },
-    {
       "category": "automation",
       "topic": "Number and date every file a script produces"
     }
